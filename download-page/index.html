@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoik Design — Descarga Oficial para Windows</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: #0c0c0e;
+      color: #ffffff;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Ambient background glows */
+    .glow-top {
+      position: absolute;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 750px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(126, 34, 206, 0.08) 45%, transparent 70%);
+      filter: blur(60px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Header */
+    header {
+      padding: 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #7e22ce, #9333ea, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 18px;
+      box-shadow: 0 4px 16px rgba(147, 51, 234, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .logo-text {
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span {
+      color: #c084fc;
+    }
+
+    .header-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s ease;
+    }
+
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Hero section */
+    .hero {
+      padding: 72px 0 48px;
+      text-align: center;
+    }
+
+    .pill-version {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #d8b4fe;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      background-color: #a855f7;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #a855f7;
+    }
+
+    .hero-title {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1.8px;
+      line-height: 1.12;
+      max-width: 860px;
+      margin: 0 auto 20px;
+      background: linear-gradient(180deg, #ffffff 40%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      color: #a1a1aa;
+      max-width: 660px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    .cta-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 56px;
+    }
+
+    .btn-download-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, #9333ea 0%, #7e22ce 50%, #6b21a8 100%);
+      color: #ffffff;
+      padding: 18px 40px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+      border: 1px solid rgba(216, 180, 254, 0.4);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-download-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(147, 51, 234, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 50%, #7e22ce 100%);
+    }
+
+    .btn-download-primary svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .download-meta {
+      font-size: 13px;
+      color: #71717a;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .download-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* App preview showcase */
+    .showcase {
+      position: relative;
+      background: #141416;
+      border: 1px solid #27272a;
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      margin-bottom: 84px;
+      overflow: hidden;
+    }
+
+    .showcase-header {
+      background: #18181b;
+      border-radius: 12px 12px 0 0;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #27272a;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-red { background-color: #ef4444; }
+    .dot-yellow { background-color: #f59e0b; }
+    .dot-green { background-color: #10b981; }
+
+    .showcase-title {
+      font-size: 11px;
+      color: #71717a;
+      font-family: monospace;
+      margin-left: 8px;
+    }
+
+    .showcase-body {
+      background: #09090b;
+      border-radius: 0 0 12px 12px;
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 480px;
+    }
+
+    .artboard-mockup {
+      width: 320px;
+      height: 400px;
+      background: #18181b;
+      border: 2px solid #3f3f46;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      position: relative;
+    }
+
+    .artboard-tag {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 84px;
+    }
+
+    .feature-card {
+      background: #141416;
+      border: 1px solid #27272a;
+      border-radius: 18px;
+      padding: 28px;
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      color: #c084fc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: #a1a1aa;
+      line-height: 1.6;
+    }
+
+    /* Steps guide */
+    .install-box {
+      background: linear-gradient(180deg, #18181b 0%, #121214 100%);
+      border: 1px solid #27272a;
+      border-radius: 24px;
+      padding: 48px;
+      margin-bottom: 84px;
+    }
+
+    .install-header {
+      text-align: center;
+      max-width: 580px;
+      margin: 0 auto 40px;
+    }
+
+    .install-header h2 {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+      margin-bottom: 12px;
+    }
+
+    .install-header p {
+      color: #a1a1aa;
+      font-size: 15px;
+    }
+
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .step-item {
+      background: #1e1e22;
+      border: 1px solid #2e2e34;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #a855f7;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .step-text {
+      color: #9ca3af;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid #27272a;
+      padding: 32px 0;
+      text-align: center;
+      color: #71717a;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .hero-title { font-size: 36px; }
+      .features-grid, .steps-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-top"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <a href="#" class="logo-badge">
+        <div class="logo-icon">Z</div>
+        <div class="logo-text">Zoik<span>Design</span></div>
+      </a>
+      <a href="#instalacion" class="header-btn">Guía de Instalación</a>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="pill-version">
+        <span class="pill-dot"></span>
+        <span>Versión 1.0.0 Oficial — Windows 10 & 11 (64-bit)</span>
+      </div>
+
+      <h1 class="hero-title">
+        Diseño Gráfico Asistido por IA y Manuales de Marca
+      </h1>
+
+      <p class="hero-subtitle">
+        El estudio de diseño para PC que genera y compone piezas publicitarias profesionales en segundos a partir de tus marcas, tipografías y copys comerciales.
+      </p>
+
+      <div class="cta-group">
+        <a href="./ZoikDesign-Setup-1.0.0.exe" class="btn-download-primary">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Descargar para Windows (.exe)</span>
+        </a>
+        <div class="download-meta">
+          <span>✔ Instalador NSIS (64-bit)</span>
+          <span>•</span>
+          <span>✔ Compatible con Windows 10 y 11</span>
+          <span>•</span>
+          <span>✔ Peso: ~78 MB</span>
+        </div>
+      </div>
+
+      <!-- Preview Mockup -->
+      <div class="showcase">
+        <div class="showcase-header">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+          <span class="showcase-title">Zoik Design — Creative Desktop Engine v1.0.0 [Lienzo Activo 1080 × 1350 px]</span>
+        </div>
+        <div class="showcase-body">
+          <div class="artboard-mockup">
+            <span class="artboard-tag">1080 × 1350 • 4:5</span>
+            <div style="font-size: 11px; font-weight: 800; color: #a855f7; letter-spacing: 1px; margin-bottom: 4px;">MANUAL DE MARCA</div>
+            <div style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 16px;">TU MARCA AQUÍ</div>
+            <div style="flex: 1; background: #202024; border-radius: 10px; border: 1px dashed #3f3f46; display: flex; align-items: center; justify-content: center; color: #71717a; font-size: 12px; margin-bottom: 16px;">
+              [ Lienzo Limpio y 100% Editable ]
+            </div>
+            <div style="background: #a855f7; color: #fff; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; font-size: 12px;">
+              Generar con IA / Diseñar
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+        </div>
+        <h3 class="feature-title">Herramientas Tipo Illustrator</h3>
+        <p class="feature-desc">Edita texto en línea directamente en el lienzo, ajusta tipografías de tu PC (C:\Windows\Fonts), añade formas vectoriales y organiza capas visualmente.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
+        </div>
+        <h3 class="feature-title">Photoshop Image Cutout</h3>
+        <p class="feature-desc">Pega imágenes con Ctrl+V desde el portapapeles o sube tus productos y elimina el fondo con un solo clic con la herramienta inteligente 🪄 Quitar Fondo.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <h3 class="feature-title">Director de Arte IA</h3>
+        <p class="feature-desc">Conecta con OpenAI (DALL-E 3 y GPT-4o) o utiliza el motor curado de estudio para redactar titulares comerciales y maquetar automáticamente.</p>
+      </div>
+    </section>
+
+    <!-- Installation Steps -->
+    <section class="install-box" id="instalacion">
+      <div class="install-header">
+        <h2>¿Cómo instalar Zoik Design en tu PC?</h2>
+        <p>Proceso simple de 3 pasos sin necesidad de instalar terminales ni programas adicionales.</p>
+      </div>
+
+      <div class="steps-row">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <h4 class="step-title">Descarga el Instalador</h4>
+          <p class="step-text">Haz clic en el botón superior para descargar <strong>ZoikDesign-Setup-1.0.0.exe</strong> en tu carpeta de descargas.</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <h4 class="step-title">Doble Clic y Ejecutar</h4>
+          <p class="step-text">Abre el instalador. Si Windows SmartScreen muestra aviso de editor nuevo, pulsa <em>"Más información"</em> ➔ <em>"Ejecutar de todas formas"</em>.</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <h4 class="step-title">¡Listo para Diseñar!</h4>
+          <p class="step-text">El asistente colocará un acceso directo en tu Escritorio. Ábrelo y comienza a crear piezas desde cero con total fluidez.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2026 Zoik Design. Todos los derechos reservados. Desarrollado para creadores y marcas líderes.</p>
+    </footer>
+  </div>
+
+</body>
+</html>
