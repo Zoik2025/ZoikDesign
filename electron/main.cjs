@@ -1,52 +1,68 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
-let mainWindow;
+// Bloqueo de instancia única: Si el usuario hace doble clic otra vez, enfoca la ventana existente
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+let mainWindow = null;
 
 function createWindow() {
+  const iconPath = path.join(__dirname, '../dist/logo.svg');
+
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#0a0d14',
     title: 'Zoik Design',
-    icon: path.join(__dirname, '../public/logo.svg'),
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#1e1e1e',
-      symbolColor: '#d4d4d8',
+      color: '#0a0d14',
+      symbolColor: '#cbd5e1',
       height: 38,
     },
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Permite cargar recursos locales y fuentes
+      webSecurity: false,
     },
-    show: false,
+    show: true, // Mostrar de inmediato para garantizar apertura instantánea
   });
 
-  // Eliminar el menú nativo antiguo de Windows ("Archivo Edición Desarrollador")
+  // Eliminar menú nativo de Windows ("Archivo Edición...")
   Menu.setApplicationMenu(null);
 
-  // Cargar según modo empaquetado (.exe) o desarrollo local
-  if (app.isPackaged) {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-  } else {
-    mainWindow.loadURL('http://localhost:3000').catch(() => {
-      mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-    });
-  }
+  // Cargar siempre los archivos locales compilados de dist/index.html
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  const indexPath = path.join(__dirname, '../dist/index.html');
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
+  if (devServerUrl) {
+    mainWindow.loadURL(devServerUrl).catch(() => {
+      mainWindow.loadFile(indexPath);
+    });
+  } else {
+    mainWindow.loadFile(indexPath);
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 app.whenReady().then(createWindow);
 
