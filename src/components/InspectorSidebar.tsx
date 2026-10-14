@@ -125,25 +125,25 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
   const contrastInfo = getContrastScore(objFill, brand.colors.backgroundDark);
 
   return (
-    <aside className="w-80 border-l border-[#27272a] bg-[#18181b] flex flex-col shrink-0 overflow-y-auto select-none custom-scroll text-xs">
+    <aside className="w-80 border-l border-[#333333] bg-[#1e1e1e] flex flex-col shrink-0 overflow-y-auto select-none custom-scroll text-xs text-[#d4d4d8]">
       
       {/* HEADER: PROPS */}
-      <div className="p-4 border-b border-[#27272a] bg-[#141416] flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center space-x-1.5">
-          <Sliders className="w-3.5 h-3.5 text-purple-400" />
+      <div className="p-3.5 border-b border-[#333333] bg-[#262626] flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center space-x-1.5">
+          <Sliders className="w-3.5 h-3.5 text-[#388bff]" />
           <span>Propiedades del Objeto</span>
         </span>
         {selectedObject && (
-          <span className="text-[10px] bg-purple-500/15 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30 font-mono uppercase">
+          <span className="text-[10px] bg-[#333333] text-zinc-200 px-2 py-0.5 rounded border border-[#444444] font-mono uppercase">
             {selectedObject.type}
           </span>
         )}
       </div>
 
-      <div className="p-4 space-y-4 flex-1">
+      <div className="p-3.5 space-y-3.5 flex-1">
         
         {selectedObject ? (
-          <div className="space-y-4 bg-[#202024] p-3.5 rounded-xl border border-[#2e2e34]">
+          <div className="space-y-3.5 bg-[#262626] p-3 rounded border border-[#383838]">
             
             {/* TEXT EDITING */}
             {isTextObj && (
@@ -154,7 +154,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                     value={objText}
                     onChange={(e) => updateActiveText(e.target.value)}
                     rows={2}
-                    className="w-full bg-[#141416] border border-[#2a2a30] focus:border-purple-500 rounded-lg p-2 text-xs text-white focus:outline-none"
+                    className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-2 text-xs text-white focus:outline-none"
                   />
                   <span className="text-[10px] text-zinc-500 block mt-0.5">También puedes hacer doble clic sobre el texto en el lienzo para escribir.</span>
                 </div>
@@ -164,7 +164,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                   <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
                     <span className="font-semibold">Tipografía</span>
                     {localPcFonts.length > 0 && (
-                      <span className="text-purple-400 flex items-center space-x-0.5 font-mono">
+                      <span className="text-[#388bff] flex items-center space-x-0.5 font-mono">
                         <Laptop className="w-2.5 h-2.5" />
                         <span>{localPcFonts.length} PC</span>
                       </span>
@@ -174,7 +174,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                   <select
                     value={objFont}
                     onChange={(e) => updateActiveFont(e.target.value)}
-                    className="w-full bg-[#141416] border border-[#2a2a30] rounded-lg p-2 text-xs text-white focus:outline-none font-semibold"
+                    className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-1.5 text-xs text-white focus:outline-none font-semibold"
                   >
                     {localPcFonts.length > 0 && (
                       <optgroup label="💻 Fuentes Instaladas en tu PC (Windows)">
@@ -359,15 +359,15 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
 
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="p-6 rounded-xl border border-dashed border-[#2e2e34] text-center text-zinc-500">
-              <Type className="w-6 h-6 mx-auto mb-2 opacity-40 text-purple-400" />
+          <div className="space-y-3.5">
+            <div className="p-6 rounded border border-dashed border-[#383838] text-center text-zinc-500 bg-[#262626]">
+              <Type className="w-5 h-5 mx-auto mb-2 opacity-50 text-zinc-400" />
               <p>Selecciona cualquier objeto, texto o imagen en el lienzo para ajustar sus propiedades.</p>
-              <p className="text-[10px] text-zinc-600 mt-1">Usa la herramienta Selección (V) para hacer clic o mover elementos libremente.</p>
+              <p className="text-[10px] text-zinc-500 mt-1">Usa la herramienta Selección (V) para hacer clic o mover elementos libremente.</p>
             </div>
 
             {/* Fondo del lienzo */}
-            <div className="bg-[#202024] p-3.5 rounded-xl border border-[#2e2e34] space-y-2.5">
+            <div className="bg-[#262626] p-3 rounded border border-[#383838] space-y-2">
               <span className="text-[11px] font-bold text-white block">Color de Fondo de la Mesa de Trabajo</span>
               <div className="flex items-center space-x-2">
                 <input
@@ -376,7 +376,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                   onChange={(e) => {
                     fabricCanvas?.setBackgroundColor(e.target.value, fabricCanvas.renderAll.bind(fabricCanvas));
                   }}
-                  className="w-8 h-8 rounded border-0 bg-transparent cursor-pointer"
+                  className="w-7 h-7 rounded border-0 bg-transparent cursor-pointer"
                 />
                 <span className="text-zinc-400 font-mono">{brand.colors.backgroundDark}</span>
               </div>

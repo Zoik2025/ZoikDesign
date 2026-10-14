@@ -93,19 +93,19 @@ export const BrandKitModal: React.FC<BrandKitModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-      <div className="bg-[#121624] border border-[#232c45] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none">
+      <div className="bg-[#262626] border border-[#3e3e3e] rounded-lg w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-xs text-[#d4d4d8]">
         
         {/* MODAL HEADER */}
-        <div className="px-5 py-4 border-b border-[#21283d] flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-[#383838] bg-[#1e1e1e] flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Palette className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-bold text-base text-white">
+            <Palette className="w-4 h-4 text-[#388bff]" />
+            <h3 className="font-bold text-sm text-white">
               {initialBrand ? 'Editar Manual de Marca' : 'Crear Nuevo Manual de Marca'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#333333] transition">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -115,25 +115,25 @@ export const BrandKitModal: React.FC<BrandKitModalProps> = ({
           {/* General info */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Nombre de la Marca *</label>
+              <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Nombre de la Marca *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej: Nova Studio"
-                className="w-full bg-[#171d2f] border border-[#26314c] focus:border-indigo-500 rounded-lg p-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-2 text-xs text-white focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Industria o Rubro</label>
+              <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Industria o Rubro</label>
               <input
                 type="text"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
                 placeholder="Ej: Moda, Café, Fitness..."
-                className="w-full bg-[#171d2f] border border-[#26314c] focus:border-indigo-500 rounded-lg p-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-2 text-xs text-white focus:outline-none"
               />
             </div>
           </div>
@@ -358,41 +358,41 @@ export const BrandKitModal: React.FC<BrandKitModalProps> = ({
           {/* LOGO SYMBOL & WEBSITE */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Símbolo / Inicial del Logo</label>
+              <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Símbolo / Inicial del Logo</label>
               <input
                 type="text"
                 maxLength={3}
                 value={logoSymbol}
                 onChange={(e) => setLogoSymbol(e.target.value)}
                 placeholder="Z"
-                className="w-full bg-[#171d2f] border border-[#26314c] focus:border-indigo-500 rounded-lg p-2.5 text-xs text-white focus:outline-none font-bold uppercase"
+                className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-2 text-xs text-white focus:outline-none font-bold uppercase"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Sitio Web / Enlace</label>
+              <label className="text-[11px] font-semibold text-zinc-400 block mb-1">Sitio Web / Enlace</label>
               <input
                 type="text"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="mimarca.com"
-                className="w-full bg-[#171d2f] border border-[#26314c] focus:border-indigo-500 rounded-lg p-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#1e1e1e] border border-[#383838] focus:border-[#0d66d0] rounded p-2 text-xs text-white focus:outline-none"
               />
             </div>
           </div>
 
           {/* SUBMIT BUTTON */}
-          <div className="pt-3 border-t border-[#21283d] flex justify-end space-x-2">
+          <div className="pt-3 border-t border-[#383838] flex justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition"
+              className="px-3.5 py-1.5 rounded bg-[#333333] hover:bg-[#3e3e3e] text-zinc-300 font-medium text-xs transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center space-x-1.5 transition"
+              className="px-4 py-1.5 rounded bg-[#0d66d0] hover:bg-[#1070e5] text-white font-semibold text-xs shadow-sm flex items-center space-x-1.5 transition"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Guardar Manual de Marca</span>

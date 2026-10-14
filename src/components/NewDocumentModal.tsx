@@ -127,22 +127,22 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="bg-[#18181b] border-2 border-purple-500/40 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none">
+      <div className="bg-[#262626] border border-[#3e3e3e] rounded-lg w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 text-xs text-[#d4d4d8]">
         
         {/* HEADER */}
-        <div className="px-6 py-4 border-b border-[#27272a] bg-[#141416] flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-[#383838] bg-[#1e1e1e] flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-600/20 border border-purple-500/40 flex items-center justify-center">
-              <FilePlus className="w-4 h-4 text-purple-400" />
+            <div className="w-7 h-7 rounded bg-[#2a2a2a] border border-[#404040] flex items-center justify-center text-zinc-300">
+              <FilePlus className="w-3.5 h-3.5 text-[#388bff]" />
             </div>
             <div>
-              <h3 className="font-extrabold text-white text-base">Nuevo Documento</h3>
-              <p className="text-xs text-zinc-400 font-sans">Elige un ajuste preestablecido o define dimensiones personalizadas</p>
+              <h3 className="font-bold text-white text-sm">Nuevo Documento</h3>
+              <p className="text-[11px] text-zinc-400 font-sans">Elige un ajuste preestablecido o define dimensiones personalizadas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#333333] transition">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -150,16 +150,16 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           
           {/* LEFT: PRESETS */}
-          <div className="flex-1 p-5 border-r border-[#27272a] overflow-y-auto custom-scroll space-y-4">
+          <div className="flex-1 p-4 border-r border-[#383838] overflow-y-auto custom-scroll space-y-3.5 bg-[#222222]">
             
             {/* TABS */}
-            <div className="flex space-x-2 border-b border-[#27272a] pb-3">
+            <div className="flex space-x-1.5 border-b border-[#383838] pb-2.5">
               <button
                 onClick={() => setActiveTab('social')}
-                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-semibold transition ${
                   activeTab === 'social'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-[#0d66d0] text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-[#2d2d2d]'
                 }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
@@ -168,10 +168,10 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('print')}
-                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-semibold transition ${
                   activeTab === 'print'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-[#0d66d0] text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-[#2d2d2d]'
                 }`}
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -180,27 +180,27 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
             </div>
 
             {/* PRESETS GRID */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {PRESETS.filter(p => p.category === activeTab).map((p) => {
                 const isSelected = p.id === selectedPresetId;
                 return (
                   <div
                     key={p.id}
                     onClick={() => handleSelectPreset(p)}
-                    className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                    className={`p-2.5 rounded border cursor-pointer transition flex flex-col justify-between ${
                       isSelected
-                        ? 'border-purple-500 bg-purple-950/20 shadow-md shadow-purple-950/40 ring-1 ring-purple-500'
-                        : 'border-[#27272a] bg-[#202024] hover:bg-[#28282e] text-zinc-300'
+                        ? 'border-[#0d66d0] bg-[#0d66d0]/15 shadow-sm ring-1 ring-[#0d66d0]'
+                        : 'border-[#383838] bg-[#282828] hover:bg-[#2e2e2e] text-zinc-300'
                     }`}
                   >
                     <div>
-                      <div className="h-14 rounded-lg bg-[#141416] border border-[#2e2e34] mb-2 flex items-center justify-center text-zinc-500">
-                        <Layout className={`w-5 h-5 ${isSelected ? 'text-purple-400' : 'text-zinc-600'}`} />
+                      <div className="h-12 rounded bg-[#1e1e1e] border border-[#383838] mb-2 flex items-center justify-center text-zinc-500">
+                        <Layout className={`w-4 h-4 ${isSelected ? 'text-[#388bff]' : 'text-zinc-500'}`} />
                       </div>
                       <h4 className="font-bold text-xs text-white leading-tight truncate">{p.name}</h4>
-                      <p className="text-[11px] text-zinc-400 font-mono mt-0.5">{p.sub}</p>
+                      <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{p.sub}</p>
                     </div>
-                    <div className="mt-2 pt-1 border-t border-[#2a2a30] flex items-center justify-between text-[10px] text-zinc-500">
+                    <div className="mt-2 pt-1 border-t border-[#383838] flex items-center justify-between text-[10px] text-zinc-500">
                       <span>{p.colorMode}</span>
                       <span>{p.dpi} DPI</span>
                     </div>
@@ -328,19 +328,19 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
             </div>
 
             {/* ACTION BUTTONS */}
-            <div className="pt-4 border-t border-[#27272a] space-y-2 mt-4">
+            <div className="pt-3 border-t border-[#383838] space-y-2 mt-4">
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2 transition"
+                className="w-full py-2.5 px-4 rounded bg-[#0d66d0] hover:bg-[#1070e5] text-white font-semibold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition"
               >
-                <Check className="w-4 h-4" />
+                <Check className="w-3.5 h-3.5" />
                 <span>Crear Mesa de Trabajo</span>
               </button>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium text-xs transition"
+                className="w-full py-1.5 px-4 rounded bg-[#333333] hover:bg-[#3e3e3e] text-zinc-300 font-medium text-xs transition"
               >
                 Cancelar
               </button>

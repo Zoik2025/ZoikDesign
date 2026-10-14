@@ -55,16 +55,16 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
     });
     canvas.setZoom(initialZoom);
 
-    // Custom styling for object control handles (Illustrator Purple style)
+    // Custom styling for object control handles (Adobe Illustrator style)
     fabric.Object.prototype.set({
-      cornerColor: '#a855f7',
-      cornerStrokeColor: '#ffffff',
-      cornerSize: 9,
-      cornerStyle: 'circle',
+      cornerColor: '#ffffff',
+      cornerStrokeColor: '#0078d4',
+      cornerSize: 8,
+      cornerStyle: 'rect',
       transparentCorners: false,
-      borderColor: '#a855f7',
-      borderScaleFactor: 1.5,
-      borderDashArray: [4, 4],
+      borderColor: '#0078d4',
+      borderScaleFactor: 1.2,
+      borderDashArray: [3, 3],
     });
 
     // Selection listeners
@@ -447,7 +447,7 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
 
       {/* THE FABRIC.JS ARTBOARD CONTAINER */}
       <div 
-        className="relative shadow-2xl rounded-xl overflow-hidden border-2 border-[#27272a] hover:border-purple-500/50 shrink-0 transition-all duration-200"
+        className="relative shadow-2xl rounded-sm overflow-hidden border border-[#3e3e3e] shrink-0 transition-all duration-200"
         style={{
           width: `${Math.round(docConfig.width * effectiveZoom)}px`,
           height: `${Math.round(docConfig.height * effectiveZoom)}px`,
@@ -457,16 +457,16 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
       </div>
 
       {/* BOTTOM STATUS BAR (ILLUSTRATOR STYLE) */}
-      <div className="mt-3 text-[11px] text-zinc-400 font-medium flex items-center space-x-2.5 bg-[#18181b] px-4 py-1.5 rounded-full border border-[#27272a] shadow">
-        <span className="text-white font-bold">{docConfig.title}</span>
+      <div className="mt-2.5 text-[11px] text-zinc-400 font-medium flex items-center space-x-2 bg-[#262626] px-3.5 py-1 rounded border border-[#383838] shadow-sm">
+        <span className="text-white font-semibold">{docConfig.title}</span>
         <span>•</span>
         <span className="font-mono">{docConfig.displayValueWidth} × {docConfig.displayValueHeight} {docConfig.unit}</span>
         <span>•</span>
-        <span className="text-purple-400 font-bold">{docConfig.colorMode}</span>
+        <span className="text-zinc-200 font-medium">{docConfig.colorMode}</span>
         <span>•</span>
         <span className="font-mono">{docConfig.dpi} DPI</span>
         <span>•</span>
-        <span className="text-zinc-500">Haz doble clic en cualquier texto para escribir</span>
+        <span className="text-zinc-500">Doble clic en texto para editar en vivo</span>
       </div>
 
     </main>

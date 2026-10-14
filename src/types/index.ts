@@ -13,6 +13,15 @@ export interface DocumentConfig {
   orientation: 'portrait' | 'landscape';
 }
 
+export interface BrandReferencePiece {
+  id: string;
+  title: string;
+  imageUrl: string;
+  format?: '1:1' | '4:5' | '9:16' | '16:9' | 'custom';
+  layoutStructure: 'hero-center' | 'split-left-right' | 'minimal-editorial' | 'promo-bold' | 'story-vertical';
+  hierarchyNotes?: string;
+}
+
 export interface BrandKit {
   id: string;
   name: string;
@@ -36,11 +45,13 @@ export interface BrandKit {
   logo: {
     symbolText: string;
     fullText: string;
+    imageUrl?: string;
     svgMarkup?: string;
   };
   website: string;
   contactHandle: string;
-  samplePieces?: string[]; // Ecosistema visual: imágenes y piezas de referencia subidas
+  samplePieces?: string[]; // Backwards compatibility
+  referencePieces?: BrandReferencePiece[]; // Piezas de referencia que guían la estructura y jerarquías
 }
 
 export type EditorTool = 'select' | 'text' | 'shape-rect' | 'shape-circle' | 'image-upload' | 'remove-bg' | 'ai-wand';
@@ -60,7 +71,7 @@ export type CompositionStyle =
   | 'split-left-right' 
   | 'minimal-editorial' 
   | 'promo-bold' 
-  | 'modern-card';
+  | 'story-vertical';
 
 export interface DesignLayer {
   id: string;
