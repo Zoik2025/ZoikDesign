@@ -267,8 +267,14 @@ export const App: React.FC = () => {
    * Diseña la pieza gráfica con estándares de agencia profesional:
    * 1. Coordenadas reales basadas en docConfig (1080x1350, 1080x1920, 1080x1080)
    * 2. Integra la imagen de la pieza de referencia subida por el usuario como protagonista
-   * 3. Tipografía publicitaria de alto impacto (H1 76-88px, jerarquías nítidas, sombras de contraste)
-   * 4. Atmósfera con gradientes, luces de estadio y cortes angulares deportivos
+  /**
+   * Master Senior Graphic Design Engine:
+   * Diseñado con estándares de Director de Arte Senior y tendencias publicitarias 2026:
+   * 1. NUNCA pega la imagen de referencia como póster (la referencia solo guía estructura y paleta).
+   * 2. Si el usuario sube una foto de producto/sujeto en el sidebar, se integra con iluminación y sombra.
+   * 3. Si no hay foto de producto, genera una composición gráfica vectorial de campeonato/marca de alto impacto.
+   * 4. Titular con jerarquía óptica de 2 tonos (White + Accent), sombras de contraste y escala de cartel publicitario.
+   * 5. Atmósfera envolvente con resplandor radial, cortes angulares y marcas de registro de estudio.
    */
   const handleGenerate = async () => {
     const canvas = fabricCanvasRef.current;
@@ -277,7 +283,6 @@ export const App: React.FC = () => {
     setIsGenerating(true);
 
     try {
-      // Dimensiones REALES del documento (NUNCA usar canvas.getWidth() que devuelve el tamaño de ventana escalado)
       const w = docConfig.width;
       const h = docConfig.height;
 
@@ -302,25 +307,26 @@ export const App: React.FC = () => {
       const badgeStr = copyInput.badgeText?.trim() || '';
       const ctaStr = copyInput.ctaText?.trim() || '';
 
-      // 1. CAPA DE FONDO ATMOSFÉRICO (NO UN FONDO PLANO VACÍO)
+      // 1. FONDO ATMOSFÉRICO CON PROFUNDIDAD Y LUCES (TENDENCIA PUBLICITARIA ACTUAL)
       const bgRect = new fabric.Rect({
         left: 0,
         top: 0,
         width: w,
         height: h,
-        fill: currentBrand.colors.backgroundDark || '#0b0f19',
+        fill: currentBrand.colors.backgroundDark || '#080b12',
         selectable: false,
         evented: false,
       });
       canvas.add(bgRect);
 
-      // Luz ambiental / Resplandor de estadio detrás del elemento protagonista
+      // Resplandor de iluminación / Halo de luz radial (Spotlight)
+      const glowCenterX = (effectiveStyle === 'split-left-right' || effectiveStyle === 'hero-split') ? w * 0.72 : w * 0.5;
       const ambientGlow = new fabric.Circle({
-        left: effectiveStyle === 'split-left-right' ? w * 0.72 : w * 0.5,
-        top: h * 0.42,
-        radius: w * 0.36,
+        left: glowCenterX,
+        top: h * 0.44,
+        radius: Math.round(w * 0.38),
         fill: currentBrand.colors.primary,
-        opacity: 0.22,
+        opacity: 0.28,
         originX: 'center',
         originY: 'center',
         selectable: false,
@@ -328,43 +334,64 @@ export const App: React.FC = () => {
       });
       canvas.add(ambientGlow);
 
-      // Cortes vectoriales angulares deportivos (estilo transmisión deportiva / ESPN / Fox Sports)
+      // Cortes vectoriales angulares estilo transmisión deportiva (ESPN / Nike / Fox Sports)
       const poly1 = new fabric.Polygon([
         { x: w * 0.38, y: 0 },
-        { x: w * 0.70, y: 0 },
-        { x: w * 0.40, y: h },
+        { x: w * 0.72, y: 0 },
+        { x: w * 0.42, y: h },
         { x: w * 0.08, y: h }
       ], {
         fill: currentBrand.colors.secondary || '#388bff',
-        opacity: 0.12,
+        opacity: 0.14,
         selectable: false,
         evented: false,
       });
       const poly2 = new fabric.Polygon([
-        { x: w * 0.60, y: 0 },
-        { x: w * 0.92, y: 0 },
-        { x: w * 0.62, y: h },
-        { x: w * 0.30, y: h }
+        { x: w * 0.62, y: 0 },
+        { x: w * 0.94, y: 0 },
+        { x: w * 0.64, y: h },
+        { x: w * 0.32, y: h }
       ], {
         fill: currentBrand.colors.primary || '#0d66d0',
-        opacity: 0.08,
+        opacity: 0.09,
         selectable: false,
         evented: false,
       });
       canvas.add(poly1, poly2);
 
+      // Marcas de registro técnico / Cruces de diseño editorial en las esquinas
+      const cross1 = new fabric.IText('+', {
+        left: 40,
+        top: 36,
+        fontSize: 16,
+        fontWeight: '300',
+        fill: 'rgba(255, 255, 255, 0.25)',
+        fontFamily: 'monospace',
+        selectable: false,
+      });
+      const cross2 = new fabric.IText('+', {
+        left: w - 50,
+        top: 36,
+        fontSize: 16,
+        fontWeight: '300',
+        fill: 'rgba(255, 255, 255, 0.25)',
+        fontFamily: 'monospace',
+        selectable: false,
+      });
+      canvas.add(cross1, cross2);
+
       // ==========================================
       // COMPOSICIÓN 1: SPLIT HORIZONTAL (4:5 / 1:1)
       // ==========================================
       if (effectiveStyle === 'split-left-right' || effectiveStyle === 'hero-split') {
-        const marginX = Math.round(w * 0.075); // ~80px
+        const marginX = Math.round(w * 0.08); // 86px
 
-        // 1. Logo de Marca
+        // 1. Logo de Marca (Sello de agencia pulido)
         const logoBadge = new fabric.Rect({
           left: marginX,
-          top: Math.round(h * 0.05),
-          width: 54,
-          height: 54,
+          top: Math.round(h * 0.052),
+          width: 52,
+          height: 52,
           rx: 12,
           ry: 12,
           fill: currentBrand.colors.primary,
@@ -372,7 +399,7 @@ export const App: React.FC = () => {
         });
         const logoChar = new fabric.IText(currentBrand.logo.symbolText || 'Z', {
           left: marginX + 15,
-          top: Math.round(h * 0.05) + 10,
+          top: Math.round(h * 0.052) + 10,
           fontSize: 26,
           fontWeight: '900',
           fill: '#ffffff',
@@ -380,8 +407,8 @@ export const App: React.FC = () => {
           selectable: true,
         });
         const logoText = new fabric.IText(currentBrand.name.toUpperCase(), {
-          left: marginX + 68,
-          top: Math.round(h * 0.05) + 16,
+          left: marginX + 66,
+          top: Math.round(h * 0.052) + 15,
           fontSize: 20,
           fontWeight: '800',
           fill: currentBrand.colors.textPrimary || '#ffffff',
@@ -392,62 +419,116 @@ export const App: React.FC = () => {
         canvas.add(logoBadge, logoChar, logoText);
 
         // 2. Badge / Etiqueta destacada
-        let contentTop = Math.round(h * 0.15);
+        let currentY = Math.round(h * 0.15);
         if (badgeStr) {
           const pill = new fabric.Rect({
             left: marginX,
-            top: contentTop,
-            width: Math.min(320, badgeStr.length * 16 + 44),
+            top: currentY,
+            width: Math.min(320, badgeStr.length * 15 + 46),
             height: 44,
             rx: 8,
             ry: 8,
             fill: currentBrand.colors.accent || '#f59e0b',
             selectable: true,
           });
-          const pillText = new fabric.IText(badgeStr.toUpperCase(), {
-            left: marginX + 18,
-            top: contentTop + 11,
-            fontSize: 16,
+          const pillText = new fabric.IText(`★  ${badgeStr.toUpperCase()}  ★`, {
+            left: marginX + 16,
+            top: currentY + 12,
+            fontSize: 15,
             fontWeight: '900',
             fill: '#ffffff',
-            fontFamily: currentBrand.typography.accentFont || currentBrand.typography.headlineFont,
+            fontFamily: currentBrand.typography.headlineFont,
             charSpacing: 60,
             selectable: true,
           });
           canvas.add(pill, pillText);
-          contentTop += 64;
+          currentY += 68;
         } else {
-          contentTop += 20;
+          currentY += 24;
         }
 
-        // 3. Titular Principal (H1) — Tamaño real de cartel, envuelto automáticamente
-        const headlineWidth = Math.round(w * 0.48); // ~520px
-        const headline = new fabric.Textbox(headlineStr.toUpperCase(), {
-          left: marginX,
-          top: contentTop,
-          width: headlineWidth,
-          fontSize: 72,
-          fontWeight: '900',
-          fill: '#ffffff',
-          lineHeight: 1.05,
-          fontFamily: currentBrand.typography.headlineFont,
-          shadow: new fabric.Shadow({
-            color: 'rgba(0, 0, 0, 0.9)',
-            blur: 16,
-            offsetX: 0,
-            offsetY: 4,
-          }),
-          selectable: true,
+        // 3. Titular Principal (H1) con Jerarquía Óptica de 2 Tonos (Senior Art Direction)
+        const words = headlineStr.toUpperCase().split(/\s+/).filter(Boolean);
+        let part1 = '';
+        let part2 = '';
+        let part3 = '';
+
+        if (words.length >= 4) {
+          part1 = words.slice(0, words.length - 2).join(' ');
+          part2 = words[words.length - 2];
+          part3 = words[words.length - 1];
+        } else if (words.length === 3) {
+          part1 = words[0];
+          part2 = words[1];
+          part3 = words[2];
+        } else if (words.length === 2) {
+          part1 = words[0];
+          part2 = words[1];
+        } else {
+          part2 = headlineStr.toUpperCase();
+        }
+
+        const shadowDef = new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.95)',
+          blur: 18,
+          offsetX: 0,
+          offsetY: 5,
         });
-        canvas.add(headline);
+
+        if (part1) {
+          const t1 = new fabric.IText(part1, {
+            left: marginX,
+            top: currentY,
+            fontSize: 66,
+            fontWeight: '900',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            shadow: shadowDef,
+            selectable: true,
+          });
+          canvas.add(t1);
+          currentY += (t1.height || 70) + 6;
+        }
+
+        if (part2) {
+          const t2 = new fabric.IText(part2, {
+            left: marginX,
+            top: currentY,
+            fontSize: 88,
+            fontWeight: '900',
+            fill: currentBrand.colors.accent || '#f59e0b',
+            fontFamily: currentBrand.typography.headlineFont,
+            shadow: shadowDef,
+            selectable: true,
+          });
+          canvas.add(t2);
+          currentY += (t2.height || 92) + 6;
+        }
+
+        if (part3) {
+          const t3 = new fabric.IText(part3, {
+            left: marginX,
+            top: currentY,
+            fontSize: 54,
+            fontWeight: '900',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            charSpacing: 70,
+            shadow: shadowDef,
+            selectable: true,
+          });
+          canvas.add(t3);
+          currentY += (t3.height || 58) + 24;
+        } else {
+          currentY += 18;
+        }
 
         // 4. Subtítulo / Bajada comercial
-        const subTop = contentTop + (headline.height || 160) + 30;
         if (subtitleStr) {
           const subtitle = new fabric.Textbox(subtitleStr, {
             left: marginX,
-            top: subTop,
-            width: headlineWidth - 20,
+            top: currentY,
+            width: Math.round(w * 0.44),
             fontSize: 26,
             fontWeight: '500',
             fill: currentBrand.colors.textSecondary || '#cbd5e1',
@@ -456,12 +537,15 @@ export const App: React.FC = () => {
             selectable: true,
           });
           canvas.add(subtitle);
+          currentY += (subtitle.height || 80) + 36;
+        } else {
+          currentY += 24;
         }
 
-        // 5. Botón de Llamado a la Acción (CTA) — Grande y clickeable
-        const ctaTop = Math.max(subTop + 140, Math.round(h * 0.68));
+        // 5. Botón de Llamado a la Acción (CTA) — De alto calibre
+        const ctaTop = Math.max(currentY, Math.round(h * 0.70));
         const ctaBtnText = (ctaStr || 'APUESTA AHORA').toUpperCase() + '  →';
-        const ctaWidth = Math.max(340, ctaBtnText.length * 15 + 60);
+        const ctaWidth = Math.max(340, ctaBtnText.length * 15 + 56);
 
         const ctaBg = new fabric.Rect({
           left: marginX,
@@ -473,14 +557,14 @@ export const App: React.FC = () => {
           fill: currentBrand.colors.primary,
           shadow: new fabric.Shadow({
             color: 'rgba(13, 102, 208, 0.45)',
-            blur: 20,
+            blur: 22,
             offsetX: 0,
             offsetY: 8,
           }),
           selectable: true,
         });
         const ctaTextObj = new fabric.IText(ctaBtnText, {
-          left: marginX + 32,
+          left: marginX + 30,
           top: ctaTop + 22,
           fontSize: 22,
           fontWeight: '900',
@@ -514,62 +598,118 @@ export const App: React.FC = () => {
         });
         canvas.add(urlText);
 
-        // 7. COLUMNA DERECHA: PROTAGONISTA VISUAL (IMAGEN DE REFERENCIA O EMBLEMA DEPORTIVO)
-        if (activeRef?.imageUrl) {
-          fabric.Image.fromURL(activeRef.imageUrl, (img) => {
-            const targetWidth = Math.round(w * 0.48); // ~520px
+        // 7. COLUMNA DERECHA: PROTAGONISTA VISUAL
+        // Si el usuario subió una foto específica de su producto o sujeto, la colocamos con sombra
+        if (copyInput.subjectImageUrl) {
+          fabric.Image.fromURL(copyInput.subjectImageUrl, (img) => {
+            const targetWidth = Math.round(w * 0.48);
             img.scaleToWidth(targetWidth);
             img.set({
               left: Math.round(w * 0.46),
-              top: Math.round(h * 0.20),
+              top: Math.round(h * 0.22),
               selectable: true,
               shadow: new fabric.Shadow({
-                color: 'rgba(0, 0, 0, 0.75)',
-                blur: 28,
+                color: 'rgba(0, 0, 0, 0.85)',
+                blur: 32,
                 offsetX: 0,
-                offsetY: 12,
+                offsetY: 16,
               }),
             });
             canvas.add(img);
             canvas.renderAll();
           }, { crossOrigin: 'anonymous' });
         } else {
-          // Si no hay imagen de referencia, construir emblema deportivo vectorial de alta energía
-          const emblemRadius = Math.round(w * 0.20);
+          // Si no subió foto, componer un Emblem Deportivo de Campeonato de alto impacto
           const emblemCenter = { x: Math.round(w * 0.72), y: Math.round(h * 0.48) };
 
+          // Anillos orbitales con luz
           const outerRing = new fabric.Circle({
-            radius: emblemRadius,
+            radius: 200,
             fill: 'transparent',
             stroke: currentBrand.colors.primary,
+            strokeWidth: 3.5,
+            strokeDashArray: [14, 8],
+            originX: 'center',
+            originY: 'center',
+          });
+          const innerRing = new fabric.Circle({
+            radius: 165,
+            fill: 'transparent',
+            stroke: 'rgba(255, 255, 255, 0.35)',
+            strokeWidth: 1.5,
+            originX: 'center',
+            originY: 'center',
+          });
+
+          // Escudo central facetado
+          const shieldBg = new fabric.Rect({
+            width: 210,
+            height: 210,
+            rx: 32,
+            ry: 32,
+            fill: '#101420',
+            stroke: currentBrand.colors.secondary || '#388bff',
             strokeWidth: 4,
-            strokeDashArray: [16, 8],
+            angle: 45,
             originX: 'center',
             originY: 'center',
           });
-          const shield = new fabric.Rect({
-            width: Math.round(emblemRadius * 1.3),
-            height: Math.round(emblemRadius * 1.3),
-            rx: 24,
-            ry: 24,
-            fill: currentBrand.colors.secondary || '#388bff',
-            opacity: 0.85,
+
+          // Estrellas doradas superiores
+          const starsText = new fabric.IText('★   ★   ★', {
+            top: -65,
+            fontSize: 24,
+            fontWeight: '900',
+            fill: '#f59e0b',
             originX: 'center',
             originY: 'center',
           });
-          const vsText = new fabric.IText('VS', {
-            fontSize: 48,
+
+          // Ícono central
+          const trophyText = new fabric.IText('VS', {
+            top: -10,
+            fontSize: 54,
             fontWeight: '900',
             fill: '#ffffff',
             originX: 'center',
             originY: 'center',
             fontFamily: currentBrand.typography.headlineFont,
           });
-          const emblemGroup = new fabric.Group([outerRing, shield, vsText], {
+
+          // Cinta / Banner inferior del emblema
+          const bannerRect = new fabric.Rect({
+            top: 55,
+            width: 240,
+            height: 42,
+            rx: 8,
+            ry: 8,
+            fill: currentBrand.colors.primary,
+            originX: 'center',
+            originY: 'center',
+          });
+          const bannerText = new fabric.IText('MATCHDAY LIVE', {
+            top: 55,
+            fontSize: 15,
+            fontWeight: '900',
+            fill: '#ffffff',
+            originX: 'center',
+            originY: 'center',
+            charSpacing: 80,
+            fontFamily: currentBrand.typography.headlineFont,
+          });
+
+          const emblemGroup = new fabric.Group([
+            outerRing, innerRing, shieldBg, starsText, trophyText, bannerRect, bannerText
+          ], {
             left: emblemCenter.x,
             top: emblemCenter.y,
             originX: 'center',
             originY: 'center',
+            shadow: new fabric.Shadow({
+              color: 'rgba(0, 0, 0, 0.8)',
+              blur: 30,
+              offsetY: 14,
+            }),
             selectable: true,
           });
           canvas.add(emblemGroup);
@@ -612,25 +752,64 @@ export const App: React.FC = () => {
         });
         canvas.add(logoBadge, logoChar, logoText);
 
-        // Imagen protagonista central
-        if (activeRef?.imageUrl) {
-          fabric.Image.fromURL(activeRef.imageUrl, (img) => {
-            img.scaleToWidth(Math.round(w * 0.72));
+        // Sujeto / Producto central o Emblema
+        if (copyInput.subjectImageUrl) {
+          fabric.Image.fromURL(copyInput.subjectImageUrl, (img) => {
+            img.scaleToWidth(Math.round(w * 0.75));
             img.set({
-              left: (w - Math.round(w * 0.72)) / 2,
-              top: Math.round(h * 0.15),
+              left: (w - Math.round(w * 0.75)) / 2,
+              top: Math.round(h * 0.16),
               selectable: true,
-              shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 30, offsetY: 12 }),
+              shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.85)', blur: 32, offsetY: 14 }),
             });
             canvas.add(img);
             canvas.renderAll();
           }, { crossOrigin: 'anonymous' });
+        } else {
+          // Emblema circular de gran escala para Story 9:16
+          const emblemCenter = { x: Math.round(w * 0.5), y: Math.round(h * 0.36) };
+          const ring = new fabric.Circle({
+            radius: 220,
+            fill: 'transparent',
+            stroke: currentBrand.colors.primary,
+            strokeWidth: 4,
+            strokeDashArray: [16, 8],
+            originX: 'center',
+            originY: 'center',
+          });
+          const shield = new fabric.Rect({
+            width: 240,
+            height: 240,
+            rx: 32,
+            ry: 32,
+            fill: '#101420',
+            stroke: currentBrand.colors.accent || '#f59e0b',
+            strokeWidth: 4,
+            angle: 45,
+            originX: 'center',
+            originY: 'center',
+          });
+          const textVS = new fabric.IText('VS', {
+            fontSize: 68,
+            fontWeight: '900',
+            fill: '#ffffff',
+            originX: 'center',
+            originY: 'center',
+          });
+          const group = new fabric.Group([ring, shield, textVS], {
+            left: emblemCenter.x,
+            top: emblemCenter.y,
+            originX: 'center',
+            originY: 'center',
+            selectable: true,
+          });
+          canvas.add(group);
         }
 
         // Tercio inferior: Titular masivo
         let lowerTop = Math.round(h * 0.60);
         if (badgeStr) {
-          const pillText = new fabric.IText(`— ${badgeStr.toUpperCase()} —`, {
+          const pillText = new fabric.IText(`★  ${badgeStr.toUpperCase()}  ★`, {
             left: Math.round(w * 0.5),
             top: lowerTop,
             originX: 'center',
@@ -638,11 +817,11 @@ export const App: React.FC = () => {
             fontWeight: '900',
             fill: currentBrand.colors.accent || '#f59e0b',
             fontFamily: currentBrand.typography.headlineFont,
-            charSpacing: 100,
+            charSpacing: 80,
             selectable: true,
           });
           canvas.add(pillText);
-          lowerTop += 45;
+          lowerTop += 48;
         }
 
         const headline = new fabric.Textbox(headlineStr.toUpperCase(), {
@@ -759,9 +938,9 @@ export const App: React.FC = () => {
         });
         canvas.add(headline);
 
-        // Imagen protagonista central
-        if (activeRef?.imageUrl) {
-          fabric.Image.fromURL(activeRef.imageUrl, (img) => {
+        // Sujeto / Producto central o Emblema
+        if (copyInput.subjectImageUrl) {
+          fabric.Image.fromURL(copyInput.subjectImageUrl, (img) => {
             img.scaleToWidth(Math.round(w * 0.60));
             img.set({
               left: (w - Math.round(w * 0.60)) / 2,

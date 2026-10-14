@@ -74,6 +74,7 @@ export interface PieceCopyInput {
   subtitle: string;
   badgeText?: string;
   ctaText?: string;
+  subjectImageUrl?: string; // Foto o imagen opcional del producto/sujeto
 }
 
 export interface CanvasFormat {

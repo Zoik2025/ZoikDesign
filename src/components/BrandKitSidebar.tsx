@@ -4,7 +4,7 @@ import { CANVAS_FORMATS } from '../data/canvasFormats';
 import { 
   Sparkles, Layers, FolderOpen, 
   Settings2, Plus, Type, CheckCircle2,
-  Sliders, Info
+  Sliders, Info, Image as ImageIcon, Upload
 } from 'lucide-react';
 
 interface BrandKitSidebarProps {
@@ -250,6 +250,64 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
             />
           </div>
         </div>
+
+        {/* 3.1 PROTAGONISTA VISUAL / FOTO DEL PRODUCTO */}
+        <div className="mt-2.5 pt-2.5 border-t border-[#333333]">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-semibold text-zinc-300 flex items-center space-x-1">
+              <ImageIcon className="w-3 h-3 text-[#388bff]" />
+              <span>Foto del Producto o Sujeto (Opcional)</span>
+            </label>
+            {copyInput.subjectImageUrl && (
+              <button
+                onClick={() => onChangeCopyInput({ ...copyInput, subjectImageUrl: undefined })}
+                className="text-[10px] text-red-400 hover:underline"
+              >
+                Quitar foto
+              </button>
+            )}
+          </div>
+
+          {copyInput.subjectImageUrl ? (
+            <div className="flex items-center space-x-2 bg-[#222222] border border-[#3e3e3e] p-1.5 rounded">
+              <img 
+                src={copyInput.subjectImageUrl} 
+                alt="Sujeto" 
+                className="w-9 h-9 object-cover rounded bg-black/40 border border-[#444444]" 
+              />
+              <div className="flex-1 overflow-hidden">
+                <span className="text-[11px] text-white block truncate font-medium">Foto cargada</span>
+                <span className="text-[9px] text-emerald-400 block truncate">Se integrará con iluminación y sombras</span>
+              </div>
+            </div>
+          ) : (
+            <label className="flex items-center justify-center p-2 border border-dashed border-[#3e3e3e] hover:border-[#0d66d0] rounded bg-[#242424] cursor-pointer transition text-zinc-400 hover:text-white group">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result) {
+                        onChangeCopyInput({ ...copyInput, subjectImageUrl: ev.target.result as string });
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                  e.target.value = '';
+                }}
+                className="hidden" 
+              />
+              <Upload className="w-3.5 h-3.5 mr-1.5 text-zinc-500 group-hover:text-[#388bff]" />
+              <span className="text-[10px]">Subir foto de producto / atleta</span>
+            </label>
+          )}
+          <span className="text-[9px] text-zinc-500 block mt-1">
+            Si no subes una foto, la IA diseñará una composición y emblema vectorial de alto impacto.
+          </span>
+        </div>
       </div>
 
       {/* 4. SECCIÓN: GUÍA DE ESTRUCTURA Y REFERENCIAS DE MARCA */}
@@ -268,7 +326,7 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
         </div>
 
         <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed">
-          Las piezas de referencia guían a la IA sobre cómo distribuir pesos visuales y jerarquías.
+          Las piezas de referencia guían la paleta, pesos visuales y estructura del diseño (no se pegan como imagen sobre la pieza).
         </p>
 
         {/* Reference Pieces List */}
