@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 interface HeaderProps {
-  currentBrand: BrandKit;
+  currentBrand?: BrandKit;
   brands: BrandKit[];
   onSelectBrand: (brand: BrandKit) => void;
   onOpenNewBrandModal: () => void;
@@ -32,24 +32,30 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
+  const noDragStyle = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
+
   return (
-    <header className="h-10 border-b border-[#333333] bg-[#1e1e1e] flex items-center justify-between px-3 z-30 shrink-0 select-none text-xs text-[#d4d4d8]">
+    <header 
+      className="h-9 border-b border-[#333333] bg-[#1e1e1e] flex items-center justify-between px-3 z-30 shrink-0 select-none text-xs text-[#d4d4d8] pr-36"
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+    >
       
-      {/* 1. APP LOGO & ILLUSTRATOR DESKTOP MENU */}
-      <div className="flex items-center space-x-3">
-        {/* Logo */}
+      {/* 1. APP BRAND & WORKSPACE MENU */}
+      <div className="flex items-center space-x-3" style={noDragStyle}>
+        
+        {/* Minimalist Logo Mark */}
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded bg-[#2a2a2a] border border-[#404040] flex items-center justify-center shadow-sm">
-            <span className="font-black text-xs text-white">Z</span>
+          <div className="w-5 h-5 rounded bg-[#2a2a2a] border border-[#404040] flex items-center justify-center shadow-sm">
+            <span className="font-black text-[10px] text-white">Z</span>
           </div>
-          <span className="font-bold tracking-tight text-white text-xs">
+          <span className="font-semibold tracking-tight text-white text-xs">
             Zoik <span className="text-[#a1a1aa] font-normal">Design</span>
           </span>
         </div>
 
         <div className="h-3.5 w-px bg-[#333333] mx-1" />
 
-        {/* Illustrator Top Menu Bar */}
+        {/* Top Menus */}
         <div className="flex items-center space-x-0.5 text-zinc-300 font-medium">
           
           {/* Archivo */}
@@ -62,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             {activeMenu === 'archivo' && (
               <div 
-                className="absolute left-0 mt-1 w-48 bg-[#262626] border border-[#3e3e3e] rounded shadow-2xl py-1 z-50 text-xs"
+                className="absolute left-0 mt-1 w-52 bg-[#262626] border border-[#3e3e3e] rounded shadow-2xl py-1 z-50 text-xs"
                 onClick={() => setActiveMenu(null)}
               >
                 <button 
@@ -102,35 +108,48 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="h-3.5 w-px bg-[#333333] mx-1" />
 
-        {/* Brand Selector + Compact Folder Icon for Reference Pieces */}
+        {/* Brand Kit Selector */}
         <div className="flex items-center space-x-1.5 bg-[#262626] border border-[#383838] rounded px-2 py-0.5">
-          <span 
-            className="w-2 h-2 rounded-full shadow-sm ring-1 ring-white/20"
-            style={{ backgroundColor: currentBrand.colors.primary }}
-          />
-          <select
-            value={currentBrand.id}
-            onChange={(e) => {
-              const found = brands.find(b => b.id === e.target.value);
-              if (found) onSelectBrand(found);
-            }}
-            className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer text-xs pr-1"
-          >
-            {brands.map((b) => (
-              <option key={b.id} value={b.id} className="bg-[#262626] text-white">
-                {b.name}
-              </option>
-            ))}
-          </select>
+          {currentBrand && (
+            <span 
+              className="w-2 h-2 rounded-full shadow-sm ring-1 ring-white/20"
+              style={{ backgroundColor: currentBrand.colors.primary }}
+            />
+          )}
 
-          {/* Compact folder icon for Brand Reference Pieces */}
-          <button
-            onClick={onOpenBrandEcosystem}
-            className="p-1 rounded hover:bg-[#383838] text-zinc-400 hover:text-white transition"
-            title="Piezas de Referencia de la Marca (Guía para la IA)"
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-          </button>
+          {brands.length > 0 && currentBrand ? (
+            <select
+              value={currentBrand.id}
+              onChange={(e) => {
+                const found = brands.find(b => b.id === e.target.value);
+                if (found) onSelectBrand(found);
+              }}
+              className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer text-xs pr-1"
+            >
+              {brands.map((b) => (
+                <option key={b.id} value={b.id} className="bg-[#262626] text-white">
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button
+              onClick={onOpenNewBrandModal}
+              className="text-xs text-white hover:underline font-semibold"
+            >
+              + Crear Kit de Marca
+            </button>
+          )}
+
+          {currentBrand && (
+            <button
+              onClick={onOpenBrandEcosystem}
+              className="p-1 rounded hover:bg-[#383838] text-zinc-400 hover:text-white transition"
+              title="Piezas de Referencia de la Marca"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           <button
             onClick={onOpenNewBrandModal}
@@ -142,8 +161,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. RIGHT ACTIONS & PREFERENCES */}
-      <div className="flex items-center space-x-2">
+      {/* 2. DRAG AREA IN THE MIDDLE */}
+      <div className="flex-1 h-full" />
+
+      {/* 3. RIGHT ACTIONS & PREFERENCES */}
+      <div className="flex items-center space-x-2" style={noDragStyle}>
         
         {/* Status indicator */}
         <button 

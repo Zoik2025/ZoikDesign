@@ -9,9 +9,16 @@ function createWindow() {
     height: 920,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0a0d14',
-    title: 'Zoik Design — Estudio Gráfico & Generador Asistido por IA',
+    backgroundColor: '#1e1e1e',
+    title: 'Zoik Design',
     icon: path.join(__dirname, '../public/logo.svg'),
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#1e1e1e',
+      symbolColor: '#d4d4d8',
+      height: 38,
+    },
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -19,6 +26,9 @@ function createWindow() {
     },
     show: false,
   });
+
+  // Eliminar el menú nativo antiguo de Windows ("Archivo Edición Desarrollador")
+  Menu.setApplicationMenu(null);
 
   // Cargar según modo empaquetado (.exe) o desarrollo local
   if (app.isPackaged) {
@@ -36,39 +46,6 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-
-  // Menú nativo minimalista
-  const template = [
-    {
-      label: 'Archivo',
-      submenu: [
-        { label: 'Recargar', role: 'reload' },
-        { label: 'Pantalla Completa', role: 'togglefullscreen' },
-        { type: 'separator' },
-        { label: 'Salir', role: 'quit' }
-      ]
-    },
-    {
-      label: 'Edición',
-      submenu: [
-        { label: 'Deshacer', role: 'undo' },
-        { label: 'Rehacer', role: 'redo' },
-        { type: 'separator' },
-        { label: 'Cortar', role: 'cut' },
-        { label: 'Copiar', role: 'copy' },
-        { label: 'Pegar', role: 'paste' },
-      ]
-    },
-    {
-      label: 'Desarrollador',
-      submenu: [
-        { label: 'Herramientas de Desarrollador', role: 'toggleDevTools' }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
 }
 
 app.whenReady().then(createWindow);

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fabric } from 'fabric';
 import saveAs from 'file-saver';
-import type { BrandKit, DocumentConfig, EditorTool, CompositionStyle } from './types';
-import { getSavedBrands, saveBrandToStorage } from './data/defaultBrands';
+import type { BrandKit, DocumentConfig, EditorTool, CompositionStyle, PieceCopyInput } from './types';
+import { getSavedBrands, saveBrandToStorage, createEmptyBrand } from './data/defaultBrands';
 import { getLocalPcFonts } from './data/systemFonts';
 import type { SystemFontInfo } from './data/systemFonts';
-import { resolveMarketingCopy } from './services/copyWriter';
-import { resolveVisualAsset } from './services/imageService';
+import { CANVAS_FORMATS } from './data/canvasFormats';
 
 import { Header } from './components/Header';
 import { TopControlBar } from './components/TopControlBar';
@@ -22,13 +21,16 @@ import { SettingsModal } from './components/SettingsModal';
 const SETTINGS_KEY = 'zoik_api_settings_v1';
 
 export const App: React.FC = () => {
-  // Brand State
-  const [brands, setBrands] = useState<BrandKit[]>(getSavedBrands());
-  const [currentBrand, setCurrentBrand] = useState<BrandKit>(brands[0]);
+  // Brand State — Inicia desde cero
+  const [brands, setBrands] = useState<BrandKit[]>(() => getSavedBrands());
+  const [currentBrand, setCurrentBrand] = useState<BrandKit>(() => {
+    const saved = getSavedBrands();
+    return saved.length > 0 ? saved[0] : createEmptyBrand('Mi Marca');
+  });
 
   // Document Config State (Adobe Illustrator style)
   const [docConfig, setDocConfig] = useState<DocumentConfig>({
-    title: 'Pieza_Zoik_01',
+    title: 'Pieza_Grafica_01',
     width: 1080,
     height: 1350, // Default 4:5 Portrait
     displayValueWidth: 1080,
@@ -39,10 +41,15 @@ export const App: React.FC = () => {
     orientation: 'portrait',
   });
 
-  // Creative & AI Generation State
-  const [briefPrompt, setBriefPrompt] = useState<string>('');
-  const [visualSubjectPrompt, setVisualSubjectPrompt] = useState<string>('');
-  const [visualProvider, setVisualProvider] = useState<'dalle' | 'freepik' | 'curated-render'>('curated-render');
+  // Copy Real del Usuario (La IA diseña sobre estos textos, NO los inventa)
+  const [copyInput, setCopyInput] = useState<PieceCopyInput>({
+    headline: 'NUEVA COLECCIÓN EXCLUSIVA',
+    subtitle: 'Calidad superior, diseño de vanguardia y garantía total en cada detalle.',
+    badgeText: '30% OFF',
+    ctaText: 'COMPRAR AHORA',
+  });
+
+  // Creative & AI Layout State
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | undefined>(undefined);
   const [compositionStyle, setCompositionStyle] = useState<CompositionStyle>('split-left-right');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -51,6 +58,10 @@ export const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<EditorTool>('select');
   const [selectedFabricObject, setSelectedFabricObject] = useState<fabric.Object | null>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+
+  // Adobe Illustrator Swatches (Fill & Stroke)
+  const [fillColor, setFillColor] = useState<string>('#ffffff');
+  const [strokeColor, setStrokeColor] = useState<string>('#0d66d0');
 
   // Local PC Fonts
   const [localPcFonts, setLocalPcFonts] = useState<SystemFontInfo[]>([]);
@@ -65,8 +76,8 @@ export const App: React.FC = () => {
     }
   });
 
-  // Modals
-  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  // Modals — Si no hay marcas guardadas, abrimos el modal para crear la primera
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(() => getSavedBrands().length === 0);
   const [isBrandEcosystemOpen, setIsBrandEcosystemOpen] = useState(false);
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -81,7 +92,18 @@ export const App: React.FC = () => {
     setLocalPcFonts(fonts);
   };
 
-  // Global Keyboard Shortcuts (Illustrator emulation)
+  // Sincronizar colores de objeto seleccionado con swatches de Illustrator
+  useEffect(() => {
+    if (!selectedFabricObject) return;
+    if (selectedFabricObject.fill && typeof selectedFabricObject.fill === 'string') {
+      setFillColor(selectedFabricObject.fill);
+    }
+    if (selectedFabricObject.stroke && typeof selectedFabricObject.stroke === 'string') {
+      setStrokeColor(selectedFabricObject.stroke);
+    }
+  }, [selectedFabricObject]);
+
+  // Global Keyboard Shortcuts (Illustrator emulation: V, A, T, P, M, L, X, D)
   useEffect(() => {
     const handleGlobalShortcuts = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
@@ -98,14 +120,66 @@ export const App: React.FC = () => {
         handleExportSVG();
       } else if (e.key === 'v' || e.key === 'V') {
         setActiveTool('select');
+      } else if (e.key === 'a' || e.key === 'A') {
+        setActiveTool('direct-select');
       } else if (e.key === 't' || e.key === 'T') {
         setActiveTool('text');
+        handleAddText();
+      } else if (e.key === 'm' || e.key === 'M') {
+        setActiveTool('shape-rect');
+        handleAddShape('rect');
+      } else if (e.key === 'l' || e.key === 'L') {
+        setActiveTool('shape-circle');
+        handleAddShape('circle');
+      } else if (e.key === 'x' || e.key === 'X') {
+        handleSwapFillStroke();
+      } else if (e.key === 'd' || e.key === 'D') {
+        handleResetFillStroke();
       }
     };
 
     window.addEventListener('keydown', handleGlobalShortcuts);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
-  }, []);
+  }, [fillColor, strokeColor, selectedFabricObject]);
+
+  // Swatch Handlers (Illustrator Emulation)
+  const handleSwapFillStroke = () => {
+    const temp = fillColor;
+    setFillColor(strokeColor);
+    setStrokeColor(temp);
+    if (selectedFabricObject && fabricCanvasRef.current) {
+      if (selectedFabricObject.fill) selectedFabricObject.set('fill', strokeColor);
+      if (selectedFabricObject.stroke) selectedFabricObject.set('stroke', temp);
+      fabricCanvasRef.current.renderAll();
+    }
+  };
+
+  const handleResetFillStroke = () => {
+    setFillColor('#ffffff');
+    setStrokeColor('#000000');
+    if (selectedFabricObject && fabricCanvasRef.current) {
+      selectedFabricObject.set('fill', '#ffffff');
+      selectedFabricObject.set('stroke', '#000000');
+      fabricCanvasRef.current.renderAll();
+    }
+  };
+
+  const handleChangeFillColor = (color: string) => {
+    setFillColor(color);
+    if (selectedFabricObject && fabricCanvasRef.current) {
+      selectedFabricObject.set('fill', color === 'transparent' ? '' : color);
+      fabricCanvasRef.current.renderAll();
+    }
+  };
+
+  const handleChangeStrokeColor = (color: string) => {
+    setStrokeColor(color);
+    if (selectedFabricObject && fabricCanvasRef.current) {
+      selectedFabricObject.set('stroke', color === 'transparent' ? '' : color);
+      selectedFabricObject.set('strokeWidth', color === 'transparent' ? 0 : 2);
+      fabricCanvasRef.current.renderAll();
+    }
+  };
 
   // Illustrator Tool: Add Text Layer
   const handleAddText = () => {
@@ -117,40 +191,55 @@ export const App: React.FC = () => {
       top: canvas.getHeight() * 0.45,
       fontSize: 36,
       fontWeight: '800',
-      fill: currentBrand.colors.textPrimary,
-      fontFamily: currentBrand.typography.headlineFont,
+      fill: currentBrand.colors.textPrimary || '#ffffff',
+      fontFamily: currentBrand.typography.headlineFont || 'Montserrat',
+      selectable: true,
     });
     canvas.add(text);
     canvas.setActiveObject(text);
-    text.enterEditing();
-    text.selectAll();
     canvas.renderAll();
   };
 
-  // Illustrator Tool: Add Shape
-  const handleAddShape = (shapeType: 'rect' | 'circle') => {
+  // Illustrator Tool: Add Vector Shapes
+  const handleAddShape = (shapeType: 'rect' | 'circle' | 'line') => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
     let shape: fabric.Object;
+    const w = canvas.getWidth();
+    const h = canvas.getHeight();
+
     if (shapeType === 'rect') {
       shape = new fabric.Rect({
-        left: canvas.getWidth() * 0.35,
-        top: canvas.getHeight() * 0.45,
-        width: 180,
-        height: 120,
-        rx: 8,
-        ry: 8,
-        fill: currentBrand.colors.primary,
+        left: w * 0.35,
+        top: h * 0.40,
+        width: 200,
+        height: 130,
+        rx: 6,
+        ry: 6,
+        fill: fillColor === 'transparent' ? '' : fillColor,
+        stroke: strokeColor === 'transparent' ? '' : strokeColor,
+        strokeWidth: strokeColor === 'transparent' ? 0 : 2,
+        selectable: true,
+      });
+    } else if (shapeType === 'circle') {
+      shape = new fabric.Circle({
+        left: w * 0.38,
+        top: h * 0.40,
+        radius: 75,
+        fill: fillColor === 'transparent' ? '' : fillColor,
+        stroke: strokeColor === 'transparent' ? '' : strokeColor,
+        strokeWidth: strokeColor === 'transparent' ? 0 : 2,
+        selectable: true,
       });
     } else {
-      shape = new fabric.Circle({
-        left: canvas.getWidth() * 0.35,
-        top: canvas.getHeight() * 0.45,
-        radius: 70,
-        fill: currentBrand.colors.accent,
+      shape = new fabric.Line([w * 0.3, h * 0.5, w * 0.7, h * 0.5], {
+        stroke: strokeColor === 'transparent' ? currentBrand.colors.primary : strokeColor,
+        strokeWidth: 3,
+        selectable: true,
       });
     }
+
     canvas.add(shape);
     canvas.setActiveObject(shape);
     canvas.renderAll();
@@ -167,7 +256,14 @@ export const App: React.FC = () => {
     setSelectedFabricObject(null);
   };
 
-  // Master AI Art Director Generation: Creates genuine professional layout on Canvas
+  /**
+   * Master Graphic Design Engine:
+   * Diseña la pieza gráfica en base a:
+   * 1. Las reglas de diseño del Kit de Marca (tipografías, paleta, logo)
+   * 2. Las piezas de referencia (jerarquía, distribución visual)
+   * 3. El copy exacto del usuario (SIN alucinaciones de la IA)
+   * 4. 100% Vectores SVG editables en el lienzo
+   */
   const handleGenerate = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -175,19 +271,13 @@ export const App: React.FC = () => {
     setIsGenerating(true);
 
     try {
-      // 1. Resolve Marketing Copy (AI or smart local extractor)
-      const copy = await resolveMarketingCopy(briefPrompt, currentBrand, apiSettings);
-
-      // 2. Resolve Visual Product Asset (DALL-E or curated keyword photography)
-      const asset = await resolveVisualAsset(visualSubjectPrompt, briefPrompt, visualProvider, apiSettings);
-
       const w = canvas.getWidth();
       const h = canvas.getHeight();
 
       canvas.clear();
       canvas.setBackgroundColor(currentBrand.colors.backgroundDark, canvas.renderAll.bind(canvas));
 
-      // Determine Layout Structure guided by Brand Reference Pieces or format
+      // Determinar estructura guiada por pieza de referencia o proporción
       let effectiveStyle = compositionStyle;
       if (selectedReferenceId && currentBrand.referencePieces) {
         const foundRef = currentBrand.referencePieces.find(r => r.id === selectedReferenceId);
@@ -198,9 +288,14 @@ export const App: React.FC = () => {
         effectiveStyle = 'split-left-right';
       }
 
-      // RENDER ARCHETYPE 1: SPLIT LEFT-RIGHT
+      const headlineStr = copyInput.headline.trim() || currentBrand.name.toUpperCase();
+      const subtitleStr = copyInput.subtitle.trim();
+      const badgeStr = copyInput.badgeText?.trim() || '';
+      const ctaStr = copyInput.ctaText?.trim() || '';
+
+      // COMPOSICIÓN 1: SPLIT HORIZONTAL (IZQUIERDA COPY / DERECHA ELEMENTO VECTORIAL)
       if (effectiveStyle === 'split-left-right') {
-        // Left: Logo
+        // Logo de Marca
         const logoSymbol = new fabric.Rect({
           left: w * 0.07,
           top: h * 0.07,
@@ -212,7 +307,7 @@ export const App: React.FC = () => {
           selectable: true,
         });
         const logoChar = new fabric.IText(currentBrand.logo.symbolText || 'Z', {
-          left: w * 0.07 + 11,
+          left: w * 0.07 + 10,
           top: h * 0.07 + 7,
           fontSize: 18,
           fontWeight: '900',
@@ -232,32 +327,34 @@ export const App: React.FC = () => {
         });
         canvas.add(logoSymbol, logoChar, logoText);
 
-        // Promo Pill
-        const pill = new fabric.Rect({
-          left: w * 0.07,
-          top: h * 0.22,
-          width: 170,
-          height: 30,
-          rx: 6,
-          ry: 6,
-          fill: currentBrand.colors.accent,
-          selectable: true,
-        });
-        const pillText = new fabric.IText(copy.badgeText, {
-          left: w * 0.07 + 14,
-          top: h * 0.22 + 7,
-          fontSize: 11,
-          fontWeight: '900',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(pill, pillText);
+        // Badge / Oferta si existe
+        if (badgeStr) {
+          const pill = new fabric.Rect({
+            left: w * 0.07,
+            top: h * 0.22,
+            width: Math.min(220, badgeStr.length * 11 + 30),
+            height: 30,
+            rx: 6,
+            ry: 6,
+            fill: currentBrand.colors.accent,
+            selectable: true,
+          });
+          const pillText = new fabric.IText(badgeStr.toUpperCase(), {
+            left: w * 0.07 + 14,
+            top: h * 0.22 + 7,
+            fontSize: 11,
+            fontWeight: '900',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.accentFont || currentBrand.typography.headlineFont,
+            selectable: true,
+          });
+          canvas.add(pill, pillText);
+        }
 
-        // Headline H1
-        const headline = new fabric.IText(copy.headline, {
+        // Titular Principal H1 (Exacto del usuario)
+        const headline = new fabric.IText(headlineStr, {
           left: w * 0.07,
-          top: h * 0.30,
+          top: badgeStr ? h * 0.30 : h * 0.24,
           fontSize: Math.round(w * 0.046),
           fontWeight: '900',
           fill: currentBrand.colors.textPrimary,
@@ -266,67 +363,97 @@ export const App: React.FC = () => {
         });
         canvas.add(headline);
 
-        // Subtitle H2
-        const subtitle = new fabric.IText(copy.subtitle, {
-          left: w * 0.07,
-          top: h * 0.52,
-          fontSize: Math.round(w * 0.019),
-          fontWeight: '400',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          selectable: true,
-        });
-        canvas.add(subtitle);
-
-        // CTA Button
-        const ctaBg = new fabric.Rect({
-          left: w * 0.07,
-          top: h * 0.70,
-          width: 180,
-          height: 42,
-          rx: 6,
-          ry: 6,
-          fill: currentBrand.colors.primary,
-          selectable: true,
-        });
-        const ctaText = new fabric.IText(copy.ctaText, {
-          left: w * 0.07 + 24,
-          top: h * 0.70 + 12,
-          fontSize: 12,
-          fontWeight: '800',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(ctaBg, ctaText);
-
-        // Website Footer
-        const urlText = new fabric.IText(`● ${currentBrand.website}`, {
-          left: w * 0.07,
-          top: h * 0.88,
-          fontSize: 11,
-          fontWeight: '600',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          selectable: true,
-        });
-        canvas.add(urlText);
-
-        // Right Hero Asset Image
-        fabric.Image.fromURL(asset.url, (img) => {
-          img.scaleToWidth(w * 0.44);
-          img.set({
-            left: w * 0.50,
-            top: h * 0.20,
+        // Subtítulo si existe
+        if (subtitleStr) {
+          const subtitle = new fabric.IText(subtitleStr, {
+            left: w * 0.07,
+            top: badgeStr ? h * 0.52 : h * 0.46,
+            fontSize: Math.round(w * 0.019),
+            fontWeight: '400',
+            fill: currentBrand.colors.textSecondary,
+            fontFamily: currentBrand.typography.bodyFont,
             selectable: true,
           });
-          canvas.add(img);
-          canvas.renderAll();
-        }, { crossOrigin: 'anonymous' });
+          canvas.add(subtitle);
+        }
 
-      // RENDER ARCHETYPE 2: STORY VERTICAL (9:16)
+        // Botón CTA si existe
+        if (ctaStr) {
+          const ctaBg = new fabric.Rect({
+            left: w * 0.07,
+            top: h * 0.70,
+            width: Math.max(180, ctaStr.length * 11 + 40),
+            height: 42,
+            rx: 6,
+            ry: 6,
+            fill: currentBrand.colors.primary,
+            selectable: true,
+          });
+          const ctaText = new fabric.IText(ctaStr, {
+            left: w * 0.07 + 22,
+            top: h * 0.70 + 12,
+            fontSize: 12,
+            fontWeight: '800',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            selectable: true,
+          });
+          canvas.add(ctaBg, ctaText);
+        }
+
+        // Web o identificador de marca
+        if (currentBrand.website || currentBrand.contactHandle) {
+          const urlText = new fabric.IText(`● ${currentBrand.website || currentBrand.contactHandle}`, {
+            left: w * 0.07,
+            top: h * 0.88,
+            fontSize: 11,
+            fontWeight: '600',
+            fill: currentBrand.colors.textSecondary,
+            fontFamily: currentBrand.typography.bodyFont,
+            selectable: true,
+          });
+          canvas.add(urlText);
+        }
+
+        // Elemento gráfico vectorial a la derecha (Composición SVG editable)
+        const vectorGroup = new fabric.Group([
+          new fabric.Circle({
+            radius: w * 0.18,
+            fill: 'transparent',
+            stroke: currentBrand.colors.primary,
+            strokeWidth: 2,
+            strokeDashArray: [12, 6],
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Rect({
+            width: w * 0.22,
+            height: w * 0.22,
+            rx: 24,
+            ry: 24,
+            fill: currentBrand.colors.secondary,
+            opacity: 0.8,
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Circle({
+            radius: w * 0.06,
+            fill: '#ffffff',
+            originX: 'center',
+            originY: 'center',
+          }),
+        ], {
+          left: w * 0.72,
+          top: h * 0.50,
+          originX: 'center',
+          originY: 'center',
+          selectable: true,
+        });
+        canvas.add(vectorGroup);
+
+      // COMPOSICIÓN 2: STORY VERTICAL (9:16)
       } else if (effectiveStyle === 'story-vertical') {
-        // Top Center Logo
+        // Logo Centrado Superior
         const logoSymbol = new fabric.Rect({
           left: w * 0.5 - 18,
           top: h * 0.05,
@@ -359,34 +486,59 @@ export const App: React.FC = () => {
         });
         canvas.add(logoSymbol, logoChar, logoText);
 
-        // Center Floating Hero Image
-        fabric.Image.fromURL(asset.url, (img) => {
-          img.scaleToWidth(w * 0.60);
-          img.set({
-            left: (w - (w * 0.60)) / 2,
-            top: h * 0.16,
-            selectable: true,
-          });
-          canvas.add(img);
-          canvas.renderAll();
-        }, { crossOrigin: 'anonymous' });
-
-        // Badge
-        const pillText = new fabric.IText(`— ${copy.badgeText} —`, {
+        // Motivo Vectorial Central
+        const vectorGroup = new fabric.Group([
+          new fabric.Circle({
+            radius: w * 0.24,
+            fill: 'transparent',
+            stroke: currentBrand.colors.primary,
+            strokeWidth: 3,
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Rect({
+            width: w * 0.28,
+            height: w * 0.28,
+            rx: 28,
+            ry: 28,
+            fill: currentBrand.colors.accent,
+            opacity: 0.85,
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Circle({
+            radius: w * 0.08,
+            fill: '#ffffff',
+            originX: 'center',
+            originY: 'center',
+          }),
+        ], {
           left: w * 0.5,
-          top: h * 0.58,
+          top: h * 0.34,
           originX: 'center',
-          fontSize: 11,
-          fontWeight: '800',
-          fill: currentBrand.colors.accent,
-          fontFamily: currentBrand.typography.headlineFont,
-          charSpacing: 100,
+          originY: 'center',
           selectable: true,
         });
-        canvas.add(pillText);
+        canvas.add(vectorGroup);
 
-        // Headline
-        const headline = new fabric.IText(copy.headline, {
+        // Badge si existe
+        if (badgeStr) {
+          const pillText = new fabric.IText(`— ${badgeStr.toUpperCase()} —`, {
+            left: w * 0.5,
+            top: h * 0.58,
+            originX: 'center',
+            fontSize: 11,
+            fontWeight: '800',
+            fill: currentBrand.colors.accent,
+            fontFamily: currentBrand.typography.headlineFont,
+            charSpacing: 100,
+            selectable: true,
+          });
+          canvas.add(pillText);
+        }
+
+        // Titular Principal H1
+        const headline = new fabric.IText(headlineStr, {
           left: w * 0.5,
           top: h * 0.63,
           originX: 'center',
@@ -399,146 +551,50 @@ export const App: React.FC = () => {
         });
         canvas.add(headline);
 
-        // Subtitle
-        const subtitle = new fabric.IText(copy.subtitle, {
-          left: w * 0.5,
-          top: h * 0.74,
-          originX: 'center',
-          fontSize: Math.round(w * 0.024),
-          fontWeight: '400',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          textAlign: 'center',
-          selectable: true,
-        });
-        canvas.add(subtitle);
-
-        // CTA Button
-        const ctaBg = new fabric.Rect({
-          left: (w - 200) / 2,
-          top: h * 0.83,
-          width: 200,
-          height: 44,
-          rx: 6,
-          ry: 6,
-          fill: currentBrand.colors.primary,
-          selectable: true,
-        });
-        const ctaText = new fabric.IText(copy.ctaText, {
-          left: w * 0.5,
-          top: h * 0.83 + 13,
-          originX: 'center',
-          fontSize: 13,
-          fontWeight: '800',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(ctaBg, ctaText);
-
-        // Bottom Handle
-        const urlText = new fabric.IText(currentBrand.website, {
-          left: w * 0.5,
-          top: h * 0.93,
-          originX: 'center',
-          fontSize: 11,
-          fontWeight: '500',
-          fill: 'rgba(255,255,255,0.4)',
-          fontFamily: currentBrand.typography.bodyFont,
-          selectable: true,
-        });
-        canvas.add(urlText);
-
-      // RENDER ARCHETYPE 3: MINIMAL EDITORIAL
-      } else if (effectiveStyle === 'minimal-editorial') {
-        const logoText = new fabric.IText(currentBrand.name.toUpperCase(), {
-          left: w * 0.5,
-          top: h * 0.08,
-          originX: 'center',
-          fontSize: 13,
-          fontWeight: '800',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.headlineFont,
-          charSpacing: 160,
-          selectable: true,
-        });
-        canvas.add(logoText);
-
-        fabric.Image.fromURL(asset.url, (img) => {
-          img.scaleToWidth(w * 0.44);
-          img.set({
-            left: (w - (w * 0.44)) / 2,
-            top: h * 0.18,
+        // Subtítulo
+        if (subtitleStr) {
+          const subtitle = new fabric.IText(subtitleStr, {
+            left: w * 0.5,
+            top: h * 0.74,
+            originX: 'center',
+            fontSize: Math.round(w * 0.024),
+            fontWeight: '400',
+            fill: currentBrand.colors.textSecondary,
+            fontFamily: currentBrand.typography.bodyFont,
+            textAlign: 'center',
             selectable: true,
           });
-          canvas.add(img);
-          canvas.renderAll();
-        }, { crossOrigin: 'anonymous' });
+          canvas.add(subtitle);
+        }
 
-        const pillText = new fabric.IText(`— ${copy.badgeText} —`, {
-          left: w * 0.5,
-          top: h * 0.63,
-          originX: 'center',
-          fontSize: 11,
-          fontWeight: '800',
-          fill: currentBrand.colors.accent,
-          fontFamily: currentBrand.typography.headlineFont,
-          charSpacing: 120,
-          selectable: true,
-        });
-        canvas.add(pillText);
+        // Botón CTA
+        if (ctaStr) {
+          const ctaBg = new fabric.Rect({
+            left: (w - 200) / 2,
+            top: h * 0.83,
+            width: 200,
+            height: 44,
+            rx: 6,
+            ry: 6,
+            fill: currentBrand.colors.primary,
+            selectable: true,
+          });
+          const ctaText = new fabric.IText(ctaStr, {
+            left: w * 0.5,
+            top: h * 0.83 + 13,
+            originX: 'center',
+            fontSize: 13,
+            fontWeight: '800',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            selectable: true,
+          });
+          canvas.add(ctaBg, ctaText);
+        }
 
-        const headline = new fabric.IText(copy.headline, {
-          left: w * 0.5,
-          top: h * 0.68,
-          originX: 'center',
-          fontSize: Math.round(w * 0.044),
-          fontWeight: '900',
-          fill: currentBrand.colors.textPrimary,
-          fontFamily: currentBrand.typography.headlineFont,
-          textAlign: 'center',
-          selectable: true,
-        });
-        canvas.add(headline);
-
-        const subtitle = new fabric.IText(copy.subtitle, {
-          left: w * 0.5,
-          top: h * 0.77,
-          originX: 'center',
-          fontSize: Math.round(w * 0.018),
-          fontWeight: '400',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          textAlign: 'center',
-          selectable: true,
-        });
-        canvas.add(subtitle);
-
-        const ctaBg = new fabric.Rect({
-          left: (w - 180) / 2,
-          top: h * 0.85,
-          width: 180,
-          height: 38,
-          rx: 4,
-          ry: 4,
-          fill: currentBrand.colors.primary,
-          selectable: true,
-        });
-        const ctaText = new fabric.IText(copy.ctaText, {
-          left: w * 0.5,
-          top: h * 0.85 + 11,
-          originX: 'center',
-          fontSize: 12,
-          fontWeight: '800',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(ctaBg, ctaText);
-
-      // RENDER ARCHETYPE 4: HERO CENTER (DEFAULT)
+      // COMPOSICIÓN 3: HERO CENTER (EDITORIAL Y EQUILIBRADO)
       } else {
-        // Top Brand Header
+        // Logo de Marca Top Left
         const logoSymbol = new fabric.Rect({
           left: w * 0.06,
           top: h * 0.05,
@@ -570,44 +626,69 @@ export const App: React.FC = () => {
         });
         canvas.add(logoSymbol, logoChar, logoText);
 
-        // Center Product Asset
-        fabric.Image.fromURL(asset.url, (img) => {
-          img.scaleToWidth(w * 0.48);
-          img.set({
-            left: (w - (w * 0.48)) / 2,
-            top: h * 0.16,
+        // Motivo Vectorial Central
+        const vectorGroup = new fabric.Group([
+          new fabric.Circle({
+            radius: w * 0.20,
+            fill: 'transparent',
+            stroke: currentBrand.colors.primary,
+            strokeWidth: 2.5,
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Rect({
+            width: w * 0.24,
+            height: w * 0.24,
+            rx: 20,
+            ry: 20,
+            fill: currentBrand.colors.secondary,
+            opacity: 0.85,
+            originX: 'center',
+            originY: 'center',
+          }),
+          new fabric.Circle({
+            radius: w * 0.07,
+            fill: '#ffffff',
+            originX: 'center',
+            originY: 'center',
+          }),
+        ], {
+          left: w * 0.5,
+          top: h * 0.36,
+          originX: 'center',
+          originY: 'center',
+          selectable: true,
+        });
+        canvas.add(vectorGroup);
+
+        // Badge
+        if (badgeStr) {
+          const pill = new fabric.Rect({
+            left: w * 0.06,
+            top: h * 0.60,
+            width: Math.min(220, badgeStr.length * 11 + 30),
+            height: 30,
+            rx: 4,
+            ry: 4,
+            fill: currentBrand.colors.primary,
             selectable: true,
           });
-          canvas.add(img);
-          canvas.renderAll();
-        }, { crossOrigin: 'anonymous' });
+          const pillText = new fabric.IText(badgeStr.toUpperCase(), {
+            left: w * 0.06 + 14,
+            top: h * 0.60 + 7,
+            fontSize: 11,
+            fontWeight: '900',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            selectable: true,
+          });
+          canvas.add(pill, pillText);
+        }
 
-        // Offer Pill
-        const pill = new fabric.Rect({
+        // Titular Principal H1
+        const headline = new fabric.IText(headlineStr, {
           left: w * 0.06,
-          top: h * 0.60,
-          width: 170,
-          height: 30,
-          rx: 4,
-          ry: 4,
-          fill: currentBrand.colors.primary,
-          selectable: true,
-        });
-        const pillText = new fabric.IText(copy.badgeText, {
-          left: w * 0.06 + 16,
-          top: h * 0.60 + 7,
-          fontSize: 11,
-          fontWeight: '900',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(pill, pillText);
-
-        // Headline H1
-        const headline = new fabric.IText(copy.headline, {
-          left: w * 0.06,
-          top: h * 0.66,
+          top: badgeStr ? h * 0.66 : h * 0.60,
           fontSize: Math.round(w * 0.046),
           fontWeight: '900',
           fill: currentBrand.colors.textPrimary,
@@ -616,51 +697,57 @@ export const App: React.FC = () => {
         });
         canvas.add(headline);
 
-        // Subtitle H2
-        const subtitle = new fabric.IText(copy.subtitle, {
-          left: w * 0.06,
-          top: h * 0.77,
-          fontSize: Math.round(w * 0.02),
-          fontWeight: '400',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          selectable: true,
-        });
-        canvas.add(subtitle);
+        // Subtítulo
+        if (subtitleStr) {
+          const subtitle = new fabric.IText(subtitleStr, {
+            left: w * 0.06,
+            top: badgeStr ? h * 0.77 : h * 0.71,
+            fontSize: Math.round(w * 0.02),
+            fontWeight: '400',
+            fill: currentBrand.colors.textSecondary,
+            fontFamily: currentBrand.typography.bodyFont,
+            selectable: true,
+          });
+          canvas.add(subtitle);
+        }
 
-        // CTA Button
-        const ctaBg = new fabric.Rect({
-          left: w * 0.68,
-          top: h * 0.86,
-          width: 170,
-          height: 42,
-          rx: 6,
-          ry: 6,
-          fill: currentBrand.colors.primary,
-          selectable: true,
-        });
-        const ctaText = new fabric.IText(copy.ctaText, {
-          left: w * 0.68 + 22,
-          top: h * 0.86 + 12,
-          fontSize: 12,
-          fontWeight: '800',
-          fill: '#ffffff',
-          fontFamily: currentBrand.typography.headlineFont,
-          selectable: true,
-        });
-        canvas.add(ctaBg, ctaText);
+        // Botón CTA
+        if (ctaStr) {
+          const ctaBg = new fabric.Rect({
+            left: w * 0.68,
+            top: h * 0.86,
+            width: Math.max(170, ctaStr.length * 10 + 36),
+            height: 42,
+            rx: 6,
+            ry: 6,
+            fill: currentBrand.colors.primary,
+            selectable: true,
+          });
+          const ctaText = new fabric.IText(ctaStr, {
+            left: w * 0.68 + 20,
+            top: h * 0.86 + 12,
+            fontSize: 12,
+            fontWeight: '800',
+            fill: '#ffffff',
+            fontFamily: currentBrand.typography.headlineFont,
+            selectable: true,
+          });
+          canvas.add(ctaBg, ctaText);
+        }
 
         // Footer URL
-        const urlText = new fabric.IText(`● ${currentBrand.website}`, {
-          left: w * 0.06,
-          top: h * 0.91,
-          fontSize: 11,
-          fontWeight: '600',
-          fill: currentBrand.colors.textSecondary,
-          fontFamily: currentBrand.typography.bodyFont,
-          selectable: true,
-        });
-        canvas.add(urlText);
+        if (currentBrand.website || currentBrand.contactHandle) {
+          const urlText = new fabric.IText(`● ${currentBrand.website || currentBrand.contactHandle}`, {
+            left: w * 0.06,
+            top: h * 0.91,
+            fontSize: 11,
+            fontWeight: '600',
+            fill: currentBrand.colors.textSecondary,
+            fontFamily: currentBrand.typography.bodyFont,
+            selectable: true,
+          });
+          canvas.add(urlText);
+        }
       }
 
       canvas.renderAll();
@@ -669,16 +756,6 @@ export const App: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // Harmonious Color Shuffle on Canvas
-  const handleShuffleColors = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-
-    const bgColors = [currentBrand.colors.backgroundDark, '#18181b', '#1e1e1e', '#121214', '#262626'];
-    const nextBg = bgColors[Math.floor(Math.random() * bgColors.length)];
-    canvas.setBackgroundColor(nextBg, canvas.renderAll.bind(canvas));
   };
 
   // Export 100% Clean Vector SVG from Fabric Canvas
@@ -771,17 +848,21 @@ export const App: React.FC = () => {
       {/* 3. MAIN 3-PANEL WORKSPACE */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* VERTICAL TOOLBAR (ILLUSTRATOR STYLE) */}
+        {/* VERTICAL TOOLBAR (ILLUSTRATOR STYLE: TOOLS + SWATCHES) */}
         <IllustratorToolbar
           activeTool={activeTool}
           onSelectTool={setActiveTool}
           onAddText={handleAddText}
           onAddShape={handleAddShape}
-          onOpenBrandEcosystem={() => setIsBrandEcosystemOpen(true)}
-          onShuffleColors={handleShuffleColors}
+          fillColor={fillColor}
+          strokeColor={strokeColor}
+          onChangeFillColor={handleChangeFillColor}
+          onChangeStrokeColor={handleChangeStrokeColor}
+          onSwapFillStroke={handleSwapFillStroke}
+          onResetFillStroke={handleResetFillStroke}
         />
 
-        {/* LEFT PANEL: BRAND KIT & AI CREATIVE DIRECTOR */}
+        {/* LEFT PANEL: BRAND KIT & COPY DEFINIDO POR EL USUARIO */}
         <BrandKitSidebar
           brand={currentBrand}
           onEditBrand={() => setIsBrandModalOpen(true)}
@@ -789,10 +870,8 @@ export const App: React.FC = () => {
           docConfig={docConfig}
           onChangeDocConfig={setDocConfig}
           onOpenNewDocumentModal={() => setIsNewDocModalOpen(true)}
-          briefPrompt={briefPrompt}
-          onChangeBrief={setBriefPrompt}
-          visualSubjectPrompt={visualSubjectPrompt}
-          onChangeVisualSubject={setVisualSubjectPrompt}
+          copyInput={copyInput}
+          onChangeCopyInput={setCopyInput}
           selectedReferenceId={selectedReferenceId}
           onSelectReferenceId={setSelectedReferenceId}
           compositionStyle={compositionStyle}
@@ -842,7 +921,7 @@ export const App: React.FC = () => {
         isOpen={isBrandModalOpen}
         onClose={() => setIsBrandModalOpen(false)}
         onSaveBrand={handleSaveBrand}
-        initialBrand={currentBrand}
+        initialBrand={brands.length > 0 ? currentBrand : undefined}
       />
 
       <BrandEcosystemModal

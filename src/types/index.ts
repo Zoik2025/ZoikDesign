@@ -54,7 +54,27 @@ export interface BrandKit {
   referencePieces?: BrandReferencePiece[]; // Piezas de referencia que guían la estructura y jerarquías
 }
 
-export type EditorTool = 'select' | 'text' | 'shape-rect' | 'shape-circle' | 'image-upload' | 'remove-bg' | 'ai-wand';
+export type EditorTool = 
+  | 'select' 
+  | 'direct-select' 
+  | 'pen' 
+  | 'text' 
+  | 'shape-rect' 
+  | 'shape-circle' 
+  | 'line' 
+  | 'eyedropper' 
+  | 'hand' 
+  | 'zoom' 
+  | 'image-upload' 
+  | 'remove-bg' 
+  | 'ai-wand';
+
+export interface PieceCopyInput {
+  headline: string;
+  subtitle: string;
+  badgeText?: string;
+  ctaText?: string;
+}
 
 export interface CanvasFormat {
   id: string;
