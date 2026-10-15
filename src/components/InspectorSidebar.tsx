@@ -893,7 +893,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
-                  value={brand.colors.backgroundDark}
+                  value={brand.colors.backgroundDark?.startsWith('#') ? brand.colors.backgroundDark : '#141416'}
                   onChange={(e) => {
                     fabricCanvas?.setBackgroundColor(e.target.value, fabricCanvas.renderAll.bind(fabricCanvas));
                   }}

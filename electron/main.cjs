@@ -21,6 +21,9 @@ process.on('unhandledRejection', (reason) => {
 
 app.setAppUserModelId('com.zoikdesign.app');
 
+// Desactivar aceleración de hardware para evitar congelamientos y pantallas negras con GPUs NVIDIA
+app.disableHardwareAcceleration();
+
 // Registro de instancia
 const gotTheLock = app.requestSingleInstanceLock();
 log(`Got single instance lock: ${gotTheLock}`);
