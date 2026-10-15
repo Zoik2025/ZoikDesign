@@ -14,7 +14,7 @@ interface LocalAiImageModalProps {
   isOpen: boolean;
   onClose: () => void;
   apiSettings?: ApiSettings;
-  onSetAsHeroSubject: (imageUrl: string, title?: string) => void;
+  onSetAsHeroSubject: (imageUrl: string, title?: string, isCutout?: boolean) => void;
   onInsertToCanvas: (imageUrl: string) => void;
 }
 
@@ -25,8 +25,9 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
   onSetAsHeroSubject,
   onInsertToCanvas,
 }) => {
-  const [prompt, setPrompt] = useState('Futbolista profesional celebrando gol bajo reflectores de estadio, foto de acción publicitaria');
-  const [cutoutBackground, setCutoutBackground] = useState(true);
+  const [prompt, setPrompt] = useState('Mujer celebrando con su celular en la mano alzada, feliz y viendo al cielo con dicha y felicidad, formato 9:16');
+  const [cutoutBackground, setCutoutBackground] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<'9:16' | '4:5' | '1:1' | '16:9'>('9:16');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState<string>('');
   const [result, setResult] = useState<AiStudioGenerationResult | null>(null);
@@ -38,23 +39,25 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
 
   const handleSelectPreset = (p: typeof PROMPT_INSPIRATION_PRESETS[0]) => {
     setPrompt(p.prompt);
+    setAspectRatio(p.aspectRatio);
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
-    setGenerationStep('Optimizando prompt publicitario...');
+    setGenerationStep('Analizando y traduciendo prompt con Director de Arte...');
 
     try {
-      setTimeout(() => setGenerationStep('Sintetizando escena en el motor local...'), 400);
+      setTimeout(() => setGenerationStep('Generando con red neuronal de difusión en tiempo real...'), 400);
       if (cutoutBackground) {
-        setTimeout(() => setGenerationStep('Muestreando canal alfa y recortando fondo...'), 1000);
+        setTimeout(() => setGenerationStep('Aplicando recorte inteligente de fondo...'), 3500);
       }
 
       const res = await generateStudioImage({
         prompt,
         cutoutBackground,
+        aspectRatio,
         localEndpoint,
         apiSettings,
       });
@@ -96,14 +99,14 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-sm font-bold tracking-tight">Estudio de Generación IA Local</h2>
+                <h2 className="text-sm font-bold tracking-tight">Estudio de Síntesis IA Neuronal</h2>
                 <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold px-2 py-0.5 rounded-full flex items-center space-x-1">
                   <ShieldCheck className="w-3 h-3 mr-0.5 inline" />
-                  <span>4GB VRAM Safe • Cero Costo</span>
+                  <span>Difusión en Tiempo Real • Cero Costo</span>
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400">
-                Sintetiza atletas, productos y sujetos publicitarios con recorte automático sin depender de APIs de pago
+                Escribe cualquier descripción en español. El motor traduce y sintetiza la escena exacta con IA.
               </p>
             </div>
           </div>
@@ -116,33 +119,82 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
         </div>
 
         {/* BODY */}
-        <div className="p-6 overflow-y-auto space-y-5 custom-scroll flex-1">
+        <div className="p-6 overflow-y-auto space-y-4 custom-scroll flex-1">
           
           {/* PROMPT INPUT */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-zinc-200 flex items-center space-x-1.5">
                 <Wand2 className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Descripción del Sujeto o Escena (Prompt)</span>
+                <span>¿Qué imagen deseas generar? (Escribe libremente)</span>
               </label>
-              <span className="text-[10px] text-zinc-400">Español o Inglés</span>
+              <span className="text-[10px] text-emerald-400 font-mono">Español o Inglés</span>
             </div>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
-              placeholder="Ej: Futbolista profesional festejando bajo la lluvia y reflectores de estadio..."
-              className="w-full bg-[#111113] border border-[#2e2e33] focus:border-indigo-500 rounded-lg p-3 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed transition"
+              placeholder="Ej: Haremos una imagen en la que vemos a una mujer dominicana celebrando con su celular en la mano alzada, feliz y viendo al cielo con dicha..."
+              className="w-full bg-[#111113] border border-[#2e2e33] focus:border-indigo-500 rounded-lg p-3 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed transition shadow-inner"
             />
+
+            {/* SELECTOR DE PROPORCIÓN / ASPECT RATIO */}
+            <div className="flex items-center space-x-1.5 mt-2">
+              <span className="text-[10px] text-zinc-400 font-medium mr-1">Formato:</span>
+              <button
+                type="button"
+                onClick={() => setAspectRatio('9:16')}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                  aspectRatio === '9:16'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-[#222226] text-zinc-400 hover:text-white border border-[#2e2e33]'
+                }`}
+              >
+                📱 9:16 (Story / Reel)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAspectRatio('4:5')}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                  aspectRatio === '4:5'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-[#222226] text-zinc-400 hover:text-white border border-[#2e2e33]'
+                }`}
+              >
+                📸 4:5 (Retrato)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAspectRatio('1:1')}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                  aspectRatio === '1:1'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-[#222226] text-zinc-400 hover:text-white border border-[#2e2e33]'
+                }`}
+              >
+                ⏹️ 1:1 (Cuadrado)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAspectRatio('16:9')}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                  aspectRatio === '16:9'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-[#222226] text-zinc-400 hover:text-white border border-[#2e2e33]'
+                }`}
+              >
+                🖥️ 16:9 (Panorámico)
+              </button>
+            </div>
           </div>
 
           {/* INSPIRATION CHIPS */}
           <div>
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-2">
-              Inspiración Rápida de Publicidad (1-Clic)
+            <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+              Ejemplos Rápidos de Inspiración (1-Clic)
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {PROMPT_INSPIRATION_PRESETS.slice(0, 8).map((p) => (
+              {PROMPT_INSPIRATION_PRESETS.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => handleSelectPreset(p)}
@@ -177,7 +229,7 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
               className="text-[11px] text-zinc-400 hover:text-white flex items-center space-x-1"
             >
               <Cpu className="w-3 h-3 text-zinc-400" />
-              <span>Configuración de Servidor Local</span>
+              <span>Servidor Local GPU (Opcional)</span>
             </button>
           </div>
 
@@ -195,7 +247,7 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
                 className="w-full bg-[#1b1b1e] border border-[#38383e] rounded px-2.5 py-1.5 text-xs text-white"
               />
               <p className="text-[10px] text-zinc-400">
-                Si ejecutas Stable Diffusion en tu PC (localhost:7860), Zoik Design consultará tu GPU local en segundo plano. Si no, utiliza el motor de estudio fotográfico integrado de latencia cero.
+                Por defecto, Zoik Design utiliza el motor neuronal directo en la nube sin costo ni registro. Si tienes Automatic1111 en tu GPU, puedes ingresar su URL aquí.
               </p>
             </div>
           )}
@@ -213,12 +265,12 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
             {isGenerating ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                <span>{generationStep || 'Sintetizando imagen publicitaria...'}</span>
+                <span>{generationStep || 'Sintetizando imagen con red neuronal...'}</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>Generar Sujeto con IA Local</span>
+                <span>Generar Imagen con IA Neuronal</span>
               </>
             )}
           </button>
@@ -227,10 +279,15 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
           {result && (
             <div className="bg-[#121215] border border-[#2b2b30] rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white flex items-center space-x-1.5">
+                <div className="flex items-center space-x-2">
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Resultado Generado: {result.title}</span>
-                </span>
+                  <span className="text-xs font-bold text-white truncate max-w-sm">
+                    {result.title}
+                  </span>
+                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+                    {result.aspectRatio}
+                  </span>
+                </div>
                 
                 {result.cutoutUrl && (
                   <button
@@ -244,12 +301,12 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
 
               {/* IMAGE CANVAS PREVIEW */}
               <div 
-                className="w-full h-72 rounded-lg border border-[#2e2e33] flex items-center justify-center overflow-hidden relative"
+                className="w-full h-80 rounded-lg border border-[#2e2e33] flex items-center justify-center overflow-hidden relative"
                 style={{
                   backgroundImage: !showOriginal && cutoutBackground
                     ? 'repeating-conic-gradient(#202025 0% 25%, #18181d 0% 50%) 50% / 20px 20px'
                     : 'none',
-                  backgroundColor: '#0d0d10'
+                  backgroundColor: '#0a0a0d'
                 }}
               >
                 <img
@@ -263,13 +320,13 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
                 <button
                   onClick={() => {
-                    onSetAsHeroSubject(activeDisplayUrl, result.title);
+                    onSetAsHeroSubject(activeDisplayUrl, result.title, cutoutBackground && !showOriginal);
                     onClose();
                   }}
                   className="py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-md transition"
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
-                  <span>Usar como Protagonista</span>
+                  <span>{cutoutBackground && !showOriginal ? 'Usar como Protagonista' : 'Establecer como Fondo'}</span>
                 </button>
 
                 <button
@@ -298,7 +355,7 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
 
         {/* FOOTER */}
         <div className="px-6 py-3 border-t border-[#27272a] bg-[#141416] flex items-center justify-between text-[11px] text-zinc-500">
-          <span>Zoik Design • Fusión de Motor de Estudio Vectorial & Síntesis IA Local</span>
+          <span>Zoik Design • Síntesis Neuronal con Traducción de Director de Arte</span>
           <button
             onClick={onClose}
             className="text-zinc-400 hover:text-white transition"

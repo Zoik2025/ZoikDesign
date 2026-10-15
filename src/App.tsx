@@ -310,29 +310,48 @@ export const App: React.FC = () => {
     await handleGenerate(nextSeed);
   };
 
-  // Establecer imagen generada por IA como protagonista y auto-diseñar pieza
-  const handleSetHeroSubject = (imageUrl: string) => {
+  // Establecer imagen generada por IA como protagonista o fondo de diseño
+  const handleSetHeroSubject = (imageUrl: string, title?: string, isCutout = true) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    if (!isCutout) {
+      // Escena completa (ej. 9:16 o 1:1 sin recortar) -> se aplica como fondo del lienzo
+      fabric.Image.fromURL(imageUrl, (img) => {
+        img.scaleToWidth(canvas.getWidth());
+        if (img.getScaledHeight() < canvas.getHeight()) {
+          img.scaleToHeight(canvas.getHeight());
+        }
+        img.set({
+          left: 0,
+          top: 0,
+          selectable: true,
+        });
+        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+        canvas.renderAll();
+      }, { crossOrigin: 'anonymous' });
+      return;
+    }
+
+    // Sujeto recortado para componer con luces y sombras
     const updatedCopy: PieceCopyInput = {
       ...copyInput,
       subjectImageUrl: imageUrl,
     };
     setCopyInput(updatedCopy);
 
-    const canvas = fabricCanvasRef.current;
-    if (canvas) {
-      setIsGenerating(true);
-      generateLocalDesignPiece({
-        canvas,
-        brand: currentBrand,
-        docConfig,
-        copyInput: updatedCopy,
-        style: compositionStyle,
-        variationSeed,
-      }).finally(() => {
-        setIsGenerating(false);
-        setSelectedFabricObject(null);
-      });
-    }
+    setIsGenerating(true);
+    generateLocalDesignPiece({
+      canvas,
+      brand: currentBrand,
+      docConfig,
+      copyInput: updatedCopy,
+      style: compositionStyle,
+      variationSeed,
+    }).finally(() => {
+      setIsGenerating(false);
+      setSelectedFabricObject(null);
+    });
   };
 
   // Insertar imagen generada por IA directamente al lienzo como nueva capa

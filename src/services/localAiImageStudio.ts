@@ -5,6 +5,7 @@ export interface AiStudioGenerationOptions {
   prompt: string;
   category?: string;
   cutoutBackground?: boolean;
+  aspectRatio?: '9:16' | '4:5' | '1:1' | '16:9';
   localEndpoint?: string;
   apiSettings?: ApiSettings;
 }
@@ -14,8 +15,10 @@ export interface AiStudioGenerationResult {
   cutoutUrl?: string;
   displayUrl: string;
   promptUsed: string;
-  engineUsed: 'local-studio' | 'local-sd' | 'dalle';
+  engineUsed: 'neural-diffusion' | 'local-sd' | 'dalle' | 'studio-fallback';
   title: string;
+  isCutout: boolean;
+  aspectRatio: string;
 }
 
 export interface PromptInspirationPreset {
@@ -24,19 +27,27 @@ export interface PromptInspirationPreset {
   icon: string;
   label: string;
   prompt: string;
-  fallbackAssetUrl: string;
+  aspectRatio: '9:16' | '4:5' | '1:1' | '16:9';
   title: string;
 }
 
-// Catálogo curado de alta resolución para el Motor de Estudio Local (Zero-Cost / Zero-VRAM)
 export const PROMPT_INSPIRATION_PRESETS: PromptInspirationPreset[] = [
+  {
+    id: 'dominican-celebration',
+    category: 'Personas & Emoción',
+    icon: '✨',
+    label: 'Mujer Celebrando',
+    prompt: 'Mujer celebrando con su celular en la mano alzada, feliz y viendo al cielo con dicha y felicidad, luz de sol caribeña',
+    aspectRatio: '9:16',
+    title: 'Mujer Celebrando con Celular',
+  },
   {
     id: 'sports-football',
     category: 'Deportes',
     icon: '⚽',
     label: 'Fútbol / Delantero',
-    prompt: 'Professional football player celebrating goal, stadium floodlights, dynamic action pose, cinematic sports photography, volumetric smoke, high contrast, 8k, isolated subject',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200&q=88',
+    prompt: 'Delantero de fútbol celebrando gol eufórico bajo los reflectores de estadio en noche de final',
+    aspectRatio: '4:5',
     title: 'Delantero Celebrando Gol',
   },
   {
@@ -44,8 +55,8 @@ export const PROMPT_INSPIRATION_PRESETS: PromptInspirationPreset[] = [
     category: 'Deportes',
     icon: '🏆',
     label: 'Trofeo de Campeón',
-    prompt: 'Championship gold trophy cup with specular reflections, dramatic dark stadium spotlights, golden sparks, luxury sports gala, isolated subject, 8k render',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=1200&q=88',
+    prompt: 'Trofeo copa dorada de campeonato con chispas de oro y reflectores oscuros dramáticos',
+    aspectRatio: '1:1',
     title: 'Trofeo Copa Dorada',
   },
   {
@@ -53,17 +64,17 @@ export const PROMPT_INSPIRATION_PRESETS: PromptInspirationPreset[] = [
     category: 'Sneakers & Moda',
     icon: '👟',
     label: 'Zapatilla Neón Tech',
-    prompt: 'Futuristic athletic running sneaker floating in air, vibrant neon glow, octane render, dynamic angle, studio lighting, carbon fiber textures, isolated on dark background',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=88',
+    prompt: 'Zapatilla deportiva running futurista flotando con salpicaduras de luz neón y textura de carbono',
+    aspectRatio: '1:1',
     title: 'Zapatilla Deportiva Red Tech',
   },
   {
     id: 'streetwear-hoodie',
     category: 'Sneakers & Moda',
     icon: '👕',
-    label: 'Moda Urbana / Streetwear',
-    prompt: 'Urban streetwear model in oversized black hoodie, dramatic rim light, minimalist studio backdrop, moody editorial fashion photography, high definition',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=1200&q=88',
+    label: 'Moda Urbana',
+    prompt: 'Modelo joven con sudadera oversize urbana negra en estudio minimalista con luz de borde cinematográfica',
+    aspectRatio: '9:16',
     title: 'Modelo Streetwear Minimal',
   },
   {
@@ -71,26 +82,17 @@ export const PROMPT_INSPIRATION_PRESETS: PromptInspirationPreset[] = [
     category: 'Gastronomía',
     icon: '🍔',
     label: 'Hamburguesa Artesanal',
-    prompt: 'Gourmet artisanal double cheeseburger with melting cheddar, crispy bacon, steam rising, dark commercial food photography, crisp focus, studio lighting, isolated',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&q=88',
+    prompt: 'Hamburguesa gourmet doble carne con queso cheddar fundido y humo caliente sobre fondo oscuro',
+    aspectRatio: '1:1',
     title: 'Hamburguesa Gourmet Humo',
-  },
-  {
-    id: 'food-coffee',
-    category: 'Gastronomía',
-    icon: '☕',
-    label: 'Café Espresso Premium',
-    prompt: 'Luxury porcelain espresso cup with creamy crema, roasted coffee beans spilling, warm dark ambient lighting, commercial beverage photography, 8k',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=1200&q=88',
-    title: 'Café Espresso Alta Gama',
   },
   {
     id: 'car-sport',
     category: 'Automotriz',
     icon: '🏎️',
     label: 'Superdeportivo Nocturno',
-    prompt: 'Glossy black supercar on dark wet asphalt, neon reflections, headlights beaming through fog, aggressive side profile, commercial car photography, 8k, isolated subject',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1200&q=88',
+    prompt: 'Superdeportivo negro brillante en asfalto mojado de noche con faros encendidos y estelas de luz',
+    aspectRatio: '16:9',
     title: 'Superdeportivo Stealth',
   },
   {
@@ -98,105 +100,162 @@ export const PROMPT_INSPIRATION_PRESETS: PromptInspirationPreset[] = [
     category: 'Lujo & Joyería',
     icon: '⌚',
     label: 'Reloj Suizo de Oro',
-    prompt: 'Luxury Swiss chronograph watch, sapphire crystal, dark obsidian marble stand, golden rim lighting, macro watchmaking photography, 8k, crisp sharpness',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&q=88',
+    prompt: 'Reloj cronógrafo suizo de oro y cristal de zafiro sobre pedestal de mármol negro con reflejos dorados',
+    aspectRatio: '1:1',
     title: 'Cronógrafo Suizo Oro y Zafiro',
-  },
-  {
-    id: 'perfume-bottle',
-    category: 'Lujo & Joyería',
-    icon: '💎',
-    label: 'Perfume de Lujo',
-    prompt: 'Amber glass luxury perfume bottle, golden mist spray, dramatic single softbox lighting, dark minimalist pedestal, 8k beauty advertising',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=1200&q=88',
-    title: 'Perfume Noir Elegance',
-  },
-  {
-    id: 'tech-headphones',
-    category: 'Tecnología',
-    icon: '🎧',
-    label: 'Auriculares Inalámbricos',
-    prompt: 'Matte black premium wireless headphones floating, cyan audio wave particles, studio lighting, hi-res commercial tech product shot, isolated',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=88',
-    title: 'Auriculares Studio Pro',
-  },
-  {
-    id: 'tech-laptop',
-    category: 'Tecnología',
-    icon: '💻',
-    label: 'Laptop Ultradelgada',
-    prompt: 'Ultra-thin sleek titanium laptop with glowing code screen, clean studio lighting, 8k modern workspace advertising photography',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&q=88',
-    title: 'Laptop Titanio Dark',
-  },
-  {
-    id: 'combat-boxing',
-    category: 'Deportes',
-    icon: '🥊',
-    label: 'Guantes de Boxeo Pro',
-    prompt: 'Red leather championship boxing gloves tied together, sweat droplets, arena smoke, dramatic spotlight, UFC / boxing poster style, 8k, isolated',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=88',
-    title: 'Guantes de Boxeo Championship',
-  },
-  {
-    id: 'fitness-athlete',
-    category: 'Deportes',
-    icon: '🏋️',
-    label: 'Atleta Crossfit / Gym',
-    prompt: 'Athletic muscular male athlete lifting kettlebell, chalk dust explosion, intense dramatic stadium lighting, dark fitness poster photography, 8k',
-    fallbackAssetUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=88',
-    title: 'Atleta Power & Chalk',
   },
 ];
 
 /**
- * Enriquecedor de prompts para fotografía publicitaria de alto impacto
+ * Limpia y traduce prompts en español conversacional
+ * a un prompt en inglés enriquecido para redes neuronales de difusión.
  */
-export function expandAdvertisingPrompt(userPrompt: string): string {
-  const clean = userPrompt.trim();
-  if (!clean) return 'commercial product studio photography, 8k, dramatic lighting, isolated';
+export function optimizeAndTranslatePrompt(rawPrompt: string, overrideAspectRatio?: '9:16' | '4:5' | '1:1' | '16:9'): {
+  englishPrompt: string;
+  width: number;
+  height: number;
+  aspectRatio: string;
+  cleanTitle: string;
+} {
+  let text = rawPrompt.trim();
+  const lower = text.toLowerCase();
 
-  const lower = clean.toLowerCase();
-  const hasLighting = lower.includes('light') || lower.includes('luz') || lower.includes('iluminac');
-  const hasQuality = lower.includes('8k') || lower.includes('octane') || lower.includes('sharp');
+  // 1. Detectar proporción de aspecto
+  let width = 768;
+  let height = 1024;
+  let aspectRatio = '4:5';
 
-  const additions: string[] = [];
-  if (!hasLighting) additions.push('commercial studio lighting', 'dramatic rim light', 'volumetric atmosphere');
-  if (!hasQuality) additions.push('8k resolution', 'hyper-detailed', 'sharp focus');
-  additions.push('clean isolated subject on dark background');
+  if (overrideAspectRatio) {
+    aspectRatio = overrideAspectRatio;
+    if (overrideAspectRatio === '9:16') {
+      width = 576;
+      height = 1024;
+    } else if (overrideAspectRatio === '16:9') {
+      width = 1024;
+      height = 576;
+    } else if (overrideAspectRatio === '1:1') {
+      width = 768;
+      height = 768;
+    } else if (overrideAspectRatio === '4:5') {
+      width = 768;
+      height = 960;
+    }
+  } else if (lower.includes('9:16') || lower.includes('story') || lower.includes('reel') || lower.includes('tiktok') || lower.includes('historia')) {
+    width = 576;
+    height = 1024;
+    aspectRatio = '9:16';
+  } else if (lower.includes('16:9') || lower.includes('panor[aá]mico') || lower.includes('horizontal') || lower.includes('banner') || lower.includes('youtube')) {
+    width = 1024;
+    height = 576;
+    aspectRatio = '16:9';
+  } else if (lower.includes('1:1') || lower.includes('cuadrad') || lower.includes('feed') || lower.includes('post')) {
+    width = 768;
+    height = 768;
+    aspectRatio = '1:1';
+  } else if (lower.includes('4:5') || lower.includes('retrato')) {
+    width = 768;
+    height = 960;
+    aspectRatio = '4:5';
+  }
 
-  return `${clean}, ${additions.join(', ')}`;
+  // 2. Limpieza de introducciones conversacionales en español
+  let cleaned = text
+    .replace(/^haremos una imagen en la que vemos a\s+/i, '')
+    .replace(/^haremos una imagen de\s+/i, '')
+    .replace(/^genera una imagen de\s+/i, '')
+    .replace(/^crea una imagen de\s+/i, '')
+    .replace(/^diseña una imagen de\s+/i, '')
+    .replace(/^vemos a\s+/i, '')
+    .replace(/^una imagen de\s+/i, '')
+    .replace(/quiero que la imagen vaya en formato\s+[0-9:]+\.?/gi, '')
+    .replace(/en formato\s+[0-9:]+\.?/gi, '')
+    .replace(/formato\s+[0-9:]+\.?/gi, '')
+    .replace(/quiero que ella se vea\s+/gi, '')
+    .replace(/quiero que el se vea\s+/gi, '')
+    .replace(/quiero que se vea\s+/gi, '')
+    .replace(/quiero que\s+/gi, '')
+    .trim();
+
+  const cleanTitle = cleaned.slice(0, 42) || 'Imagen Generada por IA';
+
+  // 3. Diccionario semántico de traducción español -> inglés para modelos de difusión
+  const replacements: [RegExp, string][] = [
+    [/\bmujer dominicana\b/gi, 'gorgeous Dominican woman'],
+    [/\bdominicana\b/gi, 'Dominican woman'],
+    [/\bmujer\b/gi, 'woman'],
+    [/\bhombree?\b/gi, 'man'],
+    [/\bjoven\b/gi, 'young person'],
+    [/\bchica\b/gi, 'young woman'],
+    [/\bcelebrando\b/gi, 'celebrating joyfully with excitement'],
+    [/\bcon su celular en la mano alzada\b/gi, 'raising her smartphone up in hand'],
+    [/\bcelular en la mano\b/gi, 'holding smartphone in hand'],
+    [/\bcelular\b|\bm[oó]vil\b|\btel[eé]fono\b/gi, 'smartphone'],
+    [/\bmano alzada\b/gi, 'raising hand up in triumph'],
+    [/\bmanos alzadas\b/gi, 'raising hands in triumph'],
+    [/\bfeliz\b/gi, 'radiant beaming smile'],
+    [/\bfelicidad\b/gi, 'pure happiness'],
+    [/\bdicha y felicidad\b/gi, 'pure bliss, euphoria and happiness'],
+    [/\bdicha\b/gi, 'pure joy and bliss'],
+    [/\bviendo al cielo\b/gi, 'looking up towards the sunlit blue sky'],
+    [/\bal cielo\b/gi, 'towards the sunlit sky'],
+    [/\bcielo\b/gi, 'bright blue sky with soft white clouds'],
+    [/\bfutbolista\b/gi, 'professional football player'],
+    [/\batleta\b/gi, 'athletic fitness competitor'],
+    [/\bbal[oó]n\b/gi, 'soccer ball'],
+    [/\bgol\b/gi, 'scoring winning goal'],
+    [/\bestadio\b/gi, 'stadium arena floodlights'],
+    [/\bzapatillas?\b|\btenis\b/gi, 'athletic running sneakers floating'],
+    [/\bauto\b|\bcoche\b/gi, 'sleek black sports supercar'],
+    [/\bhamburguesa\b/gi, 'gourmet double cheeseburger with steam'],
+    [/\breloj\b/gi, 'luxury Swiss chronograph watch'],
+    [/\bperfume\b/gi, 'luxury amber glass perfume bottle'],
+    [/\bauriculares?\b|\baud[ií]fonos\b/gi, 'matte black wireless studio headphones'],
+    [/\bcomputadora\b|\blaptop\b/gi, 'slim titanium laptop'],
+    [/\blluvia\b/gi, 'cinematic rain droplets at night'],
+    [/\bne[oó]n\b/gi, 'glowing vibrant neon rim light'],
+  ];
+
+  let englishText = cleaned;
+  for (const [regex, replacement] of replacements) {
+    englishText = englishText.replace(regex, replacement);
+  }
+
+  // 4. Enriquecimiento publicitario y de realismo
+  const englishPrompt = `${englishText}, cinematic commercial photography, natural warm sunlight, lens flare, sharp focus, 8k resolution, highly detailed, expressive eyes, authentic emotion`;
+
+  return { englishPrompt, width, height, aspectRatio, cleanTitle };
 }
 
 /**
- * Genera o sintetiza una imagen publicitaria de alta resolución:
- * 1. Intenta servidor local de difusión si existe (DirectML / SD WebUI / Ollama).
- * 2. Si hay API Key de OpenAI y el usuario la activó, puede usar DALL-E 3.
- * 3. Si no, usa el Motor de Estudio Local con recorte inteligente y composición en memoria (Zero Cost / Zero VRAM).
+ * Genera una imagen neuronal real a partir del prompt del usuario:
+ * 1. Prioridad: Servidor local de difusión si existe (localhost:7860).
+ * 2. Si no, genera directamente a través del motor neuronal de difusión en tiempo real.
+ * 3. Si hay API key de OpenAI y está activada, soporta DALL-E 3.
+ * 4. Soporta recorte alfa transparente o fondo de escena completo (9:16, 1:1, etc.).
  */
 export async function generateStudioImage({
   prompt,
   category,
-  cutoutBackground = true,
+  cutoutBackground = false,
+  aspectRatio: overrideAspectRatio,
   localEndpoint = 'http://127.0.0.1:7860',
   apiSettings,
 }: AiStudioGenerationOptions): Promise<AiStudioGenerationResult> {
-  const expandedPrompt = expandAdvertisingPrompt(prompt);
-  const lowerPrompt = prompt.toLowerCase();
+  const { englishPrompt, width, height, aspectRatio, cleanTitle } = optimizeAndTranslatePrompt(prompt, overrideAspectRatio);
 
-  // 1. Probar servidor local de difusión (Automatic1111 / Forge / SD WebUI en localhost:7860)
+  // 1. Probar Servidor Local de Difusión (Automatic1111 / Forge en localhost:7860)
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000); // 2s timeout check
+    const timeout = setTimeout(() => controller.abort(), 1800);
 
     const localCheck = await fetch(`${localEndpoint}/sdapi/v1/txt2img`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: expandedPrompt,
+        prompt: englishPrompt,
         steps: 20,
-        width: 768,
-        height: 768,
+        width,
+        height,
         cfg_scale: 7,
       }),
       signal: controller.signal,
@@ -217,19 +276,22 @@ export async function generateStudioImage({
           originalUrl: base64Url,
           cutoutUrl,
           displayUrl: cutoutBackground ? cutoutUrl : base64Url,
-          promptUsed: expandedPrompt,
+          promptUsed: englishPrompt,
           engineUsed: 'local-sd',
-          title: prompt.slice(0, 32),
+          title: cleanTitle,
+          isCutout: cutoutBackground,
+          aspectRatio,
         };
       }
     }
   } catch {
-    // Servidor local no disponible, pasar a motor de estudio o DALL-E
+    // Servidor local no disponible, continuar con motor neuronal directo
   }
 
-  // 2. Si OpenAI está activado en ajustes y tiene API Key
+  // 2. Si el usuario configuró API Key de OpenAI y la activó
   if (apiSettings?.enableLiveOpenAi && apiSettings?.openaiApiKey) {
     try {
+      const sizeStr = width > height ? '1024x1024' : (height > width ? '1024x1792' : '1024x1024');
       const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -237,9 +299,10 @@ export async function generateStudioImage({
           Authorization: `Bearer ${apiSettings.openaiApiKey}`,
         },
         body: JSON.stringify({
-          prompt: expandedPrompt,
+          prompt: englishPrompt,
           n: 1,
-          size: '1024x1024',
+          size: sizeStr === '1024x1792' ? '1024x1792' : '1024x1024',
+          model: 'dall-e-3',
           response_format: 'url',
         }),
       });
@@ -256,67 +319,96 @@ export async function generateStudioImage({
             originalUrl: url,
             cutoutUrl,
             displayUrl: cutoutBackground ? cutoutUrl : url,
-            promptUsed: expandedPrompt,
+            promptUsed: englishPrompt,
             engineUsed: 'dalle',
-            title: prompt.slice(0, 32),
+            title: cleanTitle,
+            isCutout: cutoutBackground,
+            aspectRatio,
           };
         }
       }
     } catch (err) {
-      console.warn('Error con API OpenAI, recurriendo a motor local:', err);
+      console.warn('Error con API OpenAI, recurriendo a motor neuronal directo:', err);
     }
   }
 
-  // 3. Motor de Estudio Local Inteligente (Zero-Cost / Zero-VRAM / Máxima Calidad)
-  // Busca la mejor coincidencia semántica en el catálogo de presets de estudio
-  let matchedPreset = PROMPT_INSPIRATION_PRESETS.find((p) => {
+  // 3. MOTOR NEURONAL DE DIFUSIÓN EN TIEMPO REAL (ZERO COST / ANY PROMPT)
+  // Genera exactamente la escena descrita por el usuario sin límite de temas
+  try {
+    const randomSeed = Math.floor(Math.random() * 900000) + 100000;
+    const encoded = encodeURIComponent(englishPrompt);
+    const neuralUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${randomSeed}&model=turbo`;
+
+    // Descargar imagen y convertir a DataURL base64 para independencia completa
+    const imageResponse = await fetch(neuralUrl, { method: 'GET' });
+    if (imageResponse.ok) {
+      const blob = await imageResponse.blob();
+      const base64DataUrl = await blobToDataUrl(blob);
+
+      let cutoutUrl: string | undefined = undefined;
+      if (cutoutBackground) {
+        try {
+          cutoutUrl = await processCutoutFromUrl(base64DataUrl);
+        } catch {
+          cutoutUrl = base64DataUrl;
+        }
+      }
+
+      return {
+        originalUrl: base64DataUrl,
+        cutoutUrl,
+        displayUrl: cutoutBackground && cutoutUrl ? cutoutUrl : base64DataUrl,
+        promptUsed: englishPrompt,
+        engineUsed: 'neural-diffusion',
+        title: cleanTitle,
+        isCutout: cutoutBackground,
+        aspectRatio,
+      };
+    }
+  } catch (neuralErr) {
+    console.warn('Error en conexión con motor de difusión, intentando fallback fotográfico:', neuralErr);
+  }
+
+  // 4. Fallback de Banco de Presets si no hay conexión a internet
+  const matchedPreset = PROMPT_INSPIRATION_PRESETS.find((p) => {
     const kws = p.prompt.toLowerCase().split(/\s+/).concat(p.title.toLowerCase().split(/\s+/));
-    return kws.some((w) => w.length > 3 && lowerPrompt.includes(w));
-  });
+    return kws.some((w) => w.length > 4 && prompt.toLowerCase().includes(w));
+  }) || PROMPT_INSPIRATION_PRESETS[0];
 
-  if (!matchedPreset) {
-    if (category) {
-      matchedPreset = PROMPT_INSPIRATION_PRESETS.find((p) => p.category.toLowerCase() === category.toLowerCase());
-    }
-  }
-
-  // Fallback por defecto si no hay coincidencia directa: Fútbol / Atleta o Zapatilla
-  const baseAsset = matchedPreset || PROMPT_INSPIRATION_PRESETS[0];
-  const originalUrl = baseAsset.fallbackAssetUrl;
-
-  let displayUrl = originalUrl;
-  let cutoutUrl: string | undefined = undefined;
-
-  if (cutoutBackground) {
-    try {
-      cutoutUrl = await processCutoutFromUrl(originalUrl);
-      displayUrl = cutoutUrl;
-    } catch (cutErr) {
-      console.warn('No se pudo recortar imagen, usando original:', cutErr);
-      displayUrl = originalUrl;
-    }
-  }
-
+  const fallbackUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=88';
   return {
-    originalUrl,
-    cutoutUrl,
-    displayUrl,
-    promptUsed: expandedPrompt,
-    engineUsed: 'local-studio',
-    title: baseAsset.title,
+    originalUrl: fallbackUrl,
+    displayUrl: fallbackUrl,
+    promptUsed: englishPrompt,
+    engineUsed: 'studio-fallback',
+    title: matchedPreset.title,
+    isCutout: false,
+    aspectRatio,
   };
+}
+
+/**
+ * Convierte un Blob a DataURL base64
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**
  * Carga una imagen en memoria y le aplica el algoritmo de recorte inteligente
  */
 async function processCutoutFromUrl(imageUrl: string): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = async () => {
       try {
-        const transparentDataUrl = await removeImageBackground(img, 30);
+        const transparentDataUrl = await removeImageBackground(img, 32);
         resolve(transparentDataUrl);
       } catch (e) {
         resolve(imageUrl);
