@@ -11,8 +11,10 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
   AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd,
-  Scissors, Upload, FilePlus, Eraser
+  Scissors, Upload, FilePlus, Eraser,
+  FlipHorizontal, FlipVertical, RotateCw, Wand2
 } from 'lucide-react';
+import { flipHorizontal, flipVertical, rotate90, PHOTOSHOP_BLEND_MODES } from '../services/photoshopImageFilters';
 
 interface TopControlBarProps {
   brand: BrandKit;
@@ -597,13 +599,16 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
         )}
 
         {/* ============================================================== */}
-        {/* CASE 3: IMAGE SELECTED */}
+        {/* ============================================================== */}
+        {/* CASE 3: IMAGE SELECTED (PHOTOSHOP SUITE INTEGRATION) */}
         {/* ============================================================== */}
         {isImage && (
-          <div className="flex items-center space-x-2.5">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center space-x-1">
-              <ImageIcon className="w-3.5 h-3.5 text-[#388bff]" />
-              <span>Imagen:</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center space-x-1 border-r border-[#3a3a3a] pr-2">
+              <span className="w-4 h-4 rounded bg-[#001e36] border border-[#0094ff] flex items-center justify-center font-bold text-[#0094ff] text-[8px] mr-1">
+                Ps
+              </span>
+              <span>Imagen</span>
             </span>
 
             {/* Replace image */}
@@ -616,30 +621,73 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             />
             <button
               onClick={() => replaceImageInputRef.current?.click()}
-              className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1a1a1a] hover:bg-[#333333] border border-[#3e3e3e] text-xs font-medium text-white transition"
-              title="Seleccionar otra imagen desde tu PC para reemplazar este objeto"
+              className="flex items-center space-x-1 px-2 py-1 rounded bg-[#1a1a1a] hover:bg-[#333333] border border-[#3e3e3e] text-[11px] font-medium text-white transition"
+              title="Cambiar imagen"
             >
-              <Upload className="w-3.5 h-3.5 text-[#388bff]" />
-              <span>Cambiar Imagen...</span>
+              <Upload className="w-3 h-3 text-[#388bff]" />
+              <span>Cambiar...</span>
             </button>
 
             {/* Remove background */}
             <button
               onClick={handleRemoveImageBg}
               disabled={isProcessingBg}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded border border-[#3e3e3e] text-xs font-medium transition ${
+              className={`flex items-center space-x-1 px-2 py-1 rounded border border-[#3e3e3e] text-[11px] font-medium transition ${
                 isProcessingBg 
                   ? 'bg-[#333333] text-zinc-400 cursor-not-allowed' 
                   : 'bg-[#1a1a1a] hover:bg-[#333333] text-white'
               }`}
               title="Eliminar fondo blanco o sólido automáticamente"
             >
-              <Scissors className="w-3.5 h-3.5 text-[#388bff]" />
-              <span>{isProcessingBg ? 'Recortando...' : 'Eliminar Fondo'}</span>
+              <Wand2 className="w-3 h-3 text-[#388bff]" />
+              <span>{isProcessingBg ? 'Recortando...' : 'Quitar Fondo'}</span>
             </button>
 
+            {/* Photoshop Blend Mode Selector */}
+            <div className="flex items-center space-x-1 border-l border-[#3a3a3a] pl-2">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase">Modo:</span>
+              <select
+                value={selectedObject.globalCompositeOperation || 'source-over'}
+                onChange={(e) => {
+                  selectedObject.set('globalCompositeOperation', e.target.value);
+                  fabricCanvas?.renderAll();
+                }}
+                className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-2 py-1 rounded text-[11px] focus:outline-none"
+                title="Modo de fusión de Photoshop (Blending Mode)"
+              >
+                {PHOTOSHOP_BLEND_MODES.map(bm => (
+                  <option key={bm.value} value={bm.value}>{bm.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Photoshop Flip & Rotate Tools */}
+            <div className="flex items-center space-x-0.5 border-l border-[#3a3a3a] pl-2">
+              <button
+                onClick={() => flipHorizontal(selectedObject as fabric.Image, fabricCanvas)}
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white"
+                title="Voltear Horizontal (Flip H)"
+              >
+                <FlipHorizontal className="w-3.5 h-3.5 text-[#388bff]" />
+              </button>
+              <button
+                onClick={() => flipVertical(selectedObject as fabric.Image, fabricCanvas)}
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white"
+                title="Voltear Vertical (Flip V)"
+              >
+                <FlipVertical className="w-3.5 h-3.5 text-[#388bff]" />
+              </button>
+              <button
+                onClick={() => rotate90(selectedObject as fabric.Image, fabricCanvas)}
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white"
+                title="Girar 90°"
+              >
+                <RotateCw className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+            </div>
+
             {/* Alignment for image */}
-            <div className="flex items-center space-x-0.5 pl-2 border-l border-[#3a3a3a]">
+            <div className="flex items-center space-x-0.5 border-l border-[#3a3a3a] pl-2">
               <button onClick={() => handleAlign('center-h')} className="p-1 rounded hover:bg-[#333333] text-zinc-300" title="Centrar horizontalmente">
                 <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
               </button>
@@ -648,9 +696,19 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
               </button>
             </div>
 
-            <span className="text-[11px] text-zinc-400 font-mono pl-1">
-              Opacidad: {currentOpacity}%
-            </span>
+            {/* Opacity */}
+            <div className="flex items-center space-x-1 pl-2 border-l border-[#3a3a3a] text-[11px] text-zinc-400 font-mono">
+              <span className="text-zinc-500">Opacidad:</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={currentOpacity}
+                onChange={(e) => handleOpacityChange(Number(e.target.value))}
+                className="w-11 bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1 py-0.5 rounded text-[11px] text-center focus:outline-none"
+              />
+              <span>%</span>
+            </div>
           </div>
         )}
 
