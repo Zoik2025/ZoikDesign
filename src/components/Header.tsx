@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BrandKit } from '../types';
 import { 
-  Settings, Plus, FolderOpen 
+  Settings, Plus, FolderOpen, Sparkles 
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ interface HeaderProps {
   onExportPNG: () => void;
   onOpenSettings: () => void;
   hasOpenAiKey: boolean;
+  onOpenAiStudio?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBrandEcosystem,
   onOpenSettings,
   hasOpenAiKey,
+  onOpenAiStudio,
 }) => {
   const noDragStyle = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
@@ -107,6 +109,17 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* 3. RIGHT ACTIONS & PREFERENCES */}
       <div className="flex items-center space-x-2" style={noDragStyle}>
+        {onOpenAiStudio && (
+          <button 
+            onClick={onOpenAiStudio}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-[11px] font-bold text-white shadow-sm transition"
+            title="Estudio de Generación IA Local (Sujetos & Texturas)"
+          >
+            <Sparkles className="w-3 h-3 text-amber-300" />
+            <span>Estudio IA</span>
+          </button>
+        )}
+
         <button 
           onClick={onOpenSettings}
           className="flex items-center space-x-1.5 px-2 py-1 rounded bg-[#242424] hover:bg-[#2e2e2e] border border-[#383838] text-[11px] text-zinc-300 hover:text-white transition"

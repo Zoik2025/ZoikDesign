@@ -25,6 +25,7 @@ interface BrandKitSidebarProps {
   onGenerateVariation?: () => void;
   variationSeed?: number;
   isGenerating: boolean;
+  onOpenAiStudio?: () => void;
 }
 
 export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
@@ -44,6 +45,7 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
   onGenerateVariation,
   variationSeed = 0,
   isGenerating,
+  onOpenAiStudio,
 }) => {
   const referencePieces = brand.referencePieces || [];
 
@@ -258,10 +260,10 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
 
         {/* 3.1 PROTAGONISTA VISUAL / FOTO DEL PRODUCTO */}
         <div className="mt-2.5 pt-2.5 border-t border-[#333333]">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1.5">
             <label className="text-[10px] font-semibold text-zinc-300 flex items-center space-x-1">
               <ImageIcon className="w-3 h-3 text-[#388bff]" />
-              <span>Foto del Producto o Sujeto (Opcional)</span>
+              <span>Protagonista Visual / Foto del Sujeto</span>
             </label>
             {copyInput.subjectImageUrl && (
               <button
@@ -274,44 +276,71 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
           </div>
 
           {copyInput.subjectImageUrl ? (
-            <div className="flex items-center space-x-2 bg-[#222222] border border-[#3e3e3e] p-1.5 rounded">
-              <img 
-                src={copyInput.subjectImageUrl} 
-                alt="Sujeto" 
-                className="w-9 h-9 object-cover rounded bg-black/40 border border-[#444444]" 
-              />
-              <div className="flex-1 overflow-hidden">
-                <span className="text-[11px] text-white block truncate font-medium">Foto cargada</span>
-                <span className="text-[9px] text-emerald-400 block truncate">Se integrará con iluminación y sombras</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center space-x-2 bg-[#222222] border border-[#3e3e3e] p-2 rounded">
+                <img 
+                  src={copyInput.subjectImageUrl} 
+                  alt="Sujeto" 
+                  className="w-10 h-10 object-contain rounded bg-black/50 border border-[#444444]" 
+                />
+                <div className="flex-1 overflow-hidden">
+                  <span className="text-[11px] text-white block truncate font-medium">Sujeto Activo</span>
+                  <span className="text-[9px] text-emerald-400 block truncate font-medium">● Integrado con luces y sombras</span>
+                </div>
               </div>
+              {onOpenAiStudio && (
+                <button
+                  type="button"
+                  onClick={onOpenAiStudio}
+                  className="w-full py-1.5 px-2 rounded bg-[#2b2b30] hover:bg-[#34343a] text-zinc-300 hover:text-white border border-[#3e3e44] text-[10px] font-medium flex items-center justify-center space-x-1.5 transition"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>Generar otro sujeto con IA</span>
+                </button>
+              )}
             </div>
           ) : (
-            <label className="flex items-center justify-center p-2 border border-dashed border-[#3e3e3e] hover:border-[#0d66d0] rounded bg-[#242424] cursor-pointer transition text-zinc-400 hover:text-white group">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      if (ev.target?.result) {
-                        onChangeCopyInput({ ...copyInput, subjectImageUrl: ev.target.result as string });
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-1.5">
+                {onOpenAiStudio && (
+                  <button
+                    type="button"
+                    onClick={onOpenAiStudio}
+                    className="flex items-center justify-center p-2 rounded bg-gradient-to-r from-[#0d66d0] via-indigo-600 to-[#7c3aed] hover:from-[#1070e5] hover:to-[#8b5cf6] text-white font-bold text-xs transition shadow-sm group"
+                    title="Sintetizar futbolista, atleta o producto con IA y recorte automático"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-300 group-hover:scale-110 transition" />
+                    <span>Generar IA</span>
+                  </button>
+                )}
+                <label className="flex items-center justify-center p-2 border border-dashed border-[#3e3e3e] hover:border-[#0d66d0] rounded bg-[#242424] cursor-pointer transition text-zinc-300 hover:text-white">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          if (ev.target?.result) {
+                            onChangeCopyInput({ ...copyInput, subjectImageUrl: ev.target.result as string });
+                          }
+                        };
+                        reader.readAsDataURL(file);
                       }
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                  e.target.value = '';
-                }}
-                className="hidden" 
-              />
-              <Upload className="w-3.5 h-3.5 mr-1.5 text-zinc-500 group-hover:text-[#388bff]" />
-              <span className="text-[10px]">Subir foto de producto / atleta</span>
-            </label>
+                      e.target.value = '';
+                    }}
+                    className="hidden" 
+                  />
+                  <Upload className="w-3.5 h-3.5 mr-1 text-zinc-400" />
+                  <span className="text-[10px]">Subir Foto</span>
+                </label>
+              </div>
+              <span className="text-[9px] text-zinc-400 block leading-tight">
+                ⚡ Genera un atleta o producto con IA, o el motor creará un Escudo 3D de Campeonato con luces de estadio.
+              </span>
+            </div>
           )}
-          <span className="text-[9px] text-zinc-500 block mt-1">
-            Si no subes una foto, la IA diseñará una composición y emblema vectorial de alto impacto.
-          </span>
         </div>
       </div>
 

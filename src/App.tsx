@@ -17,6 +17,7 @@ import { BrandKitModal } from './components/BrandKitModal';
 import { BrandEcosystemModal } from './components/BrandEcosystemModal';
 import { NewDocumentModal } from './components/NewDocumentModal';
 import { SettingsModal } from './components/SettingsModal';
+import { LocalAiImageModal } from './components/LocalAiImageModal';
 import { generateLocalDesignPiece } from './services/localDesignEngine';
 
 const SETTINGS_KEY = 'zoik_api_settings_v1';
@@ -83,6 +84,7 @@ export const App: React.FC = () => {
   const [isBrandEcosystemOpen, setIsBrandEcosystemOpen] = useState(false);
   const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAiStudioOpen, setIsAiStudioOpen] = useState(false);
 
   // Detect local PC fonts on startup
   useEffect(() => {
@@ -308,6 +310,56 @@ export const App: React.FC = () => {
     await handleGenerate(nextSeed);
   };
 
+  // Establecer imagen generada por IA como protagonista y auto-diseñar pieza
+  const handleSetHeroSubject = (imageUrl: string) => {
+    const updatedCopy: PieceCopyInput = {
+      ...copyInput,
+      subjectImageUrl: imageUrl,
+    };
+    setCopyInput(updatedCopy);
+
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      setIsGenerating(true);
+      generateLocalDesignPiece({
+        canvas,
+        brand: currentBrand,
+        docConfig,
+        copyInput: updatedCopy,
+        style: compositionStyle,
+        variationSeed,
+      }).finally(() => {
+        setIsGenerating(false);
+        setSelectedFabricObject(null);
+      });
+    }
+  };
+
+  // Insertar imagen generada por IA directamente al lienzo como nueva capa
+  const handleInsertImageToCanvas = (imageUrl: string) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    fabric.Image.fromURL(imageUrl, (img) => {
+      const targetW = Math.round(canvas.getWidth() * 0.48);
+      img.scaleToWidth(targetW);
+      img.set({
+        left: Math.round((canvas.getWidth() - targetW) / 2),
+        top: Math.round((canvas.getHeight() - img.getScaledHeight()) / 2),
+        selectable: true,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.88)',
+          blur: 28,
+          offsetY: 12,
+        }),
+      });
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      setSelectedFabricObject(img);
+    }, { crossOrigin: 'anonymous' });
+  };
+
   // Export 100% Clean Vector SVG from Fabric Canvas
   const handleExportSVG = () => {
     const canvas = fabricCanvasRef.current;
@@ -379,6 +431,7 @@ export const App: React.FC = () => {
         onExportPNG={handleExportPNG}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         hasOpenAiKey={Boolean(apiSettings.openaiApiKey)}
+        onOpenAiStudio={() => setIsAiStudioOpen(true)}
       />
 
       {/* 2. TOP CONTROL BAR (ILLUSTRATOR CONTEXTUAL CONTROL STRIP) */}
@@ -430,6 +483,7 @@ export const App: React.FC = () => {
           onGenerateVariation={handleGenerateVariation}
           variationSeed={variationSeed}
           isGenerating={isGenerating}
+          onOpenAiStudio={() => setIsAiStudioOpen(true)}
         />
 
         {/* CENTER: TRUE INTERACTIVE FABRIC.JS CANVAS */}
@@ -502,6 +556,14 @@ export const App: React.FC = () => {
           setApiSettings(s);
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
         }}
+      />
+
+      <LocalAiImageModal
+        isOpen={isAiStudioOpen}
+        onClose={() => setIsAiStudioOpen(false)}
+        apiSettings={apiSettings}
+        onSetAsHeroSubject={handleSetHeroSubject}
+        onInsertToCanvas={handleInsertImageToCanvas}
       />
 
     </div>
