@@ -92,7 +92,9 @@ export type CompositionStyle =
   | 'split-left-right' 
   | 'minimal-editorial' 
   | 'promo-bold' 
-  | 'story-vertical';
+  | 'story-vertical'
+  | 'cyber-tech'
+  | 'sports-impact';
 
 export interface DesignLayer {
   id: string;

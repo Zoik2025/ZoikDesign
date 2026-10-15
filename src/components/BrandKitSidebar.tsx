@@ -4,7 +4,8 @@ import { CANVAS_FORMATS } from '../data/canvasFormats';
 import { 
   Sparkles, Layers, FolderOpen, 
   Settings2, Plus, Type, CheckCircle2,
-  Sliders, Info, Image as ImageIcon, Upload
+  Sliders, Info, Image as ImageIcon, Upload,
+  Shuffle
 } from 'lucide-react';
 
 interface BrandKitSidebarProps {
@@ -21,6 +22,8 @@ interface BrandKitSidebarProps {
   compositionStyle: CompositionStyle;
   onChangeCompositionStyle: (style: CompositionStyle) => void;
   onGenerate: () => void;
+  onGenerateVariation?: () => void;
+  variationSeed?: number;
   isGenerating: boolean;
 }
 
@@ -38,6 +41,8 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
   compositionStyle,
   onChangeCompositionStyle,
   onGenerate,
+  onGenerateVariation,
+  variationSeed = 0,
   isGenerating,
 }) => {
   const referencePieces = brand.referencePieces || [];
@@ -392,31 +397,125 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
         )}
       </div>
 
-      {/* 5. BOTÓN PRINCIPAL DE DISEÑO (100% SVG VECTORIAL) */}
-      <div className="p-3 bg-[#222222] border-t border-[#333333]">
-        <button
-          onClick={onGenerate}
-          disabled={isGenerating || !copyInput.headline.trim()}
-          className={`w-full py-2.5 px-3 rounded font-bold text-xs tracking-wide shadow-sm flex items-center justify-center space-x-2 transition ${
-            isGenerating || !copyInput.headline.trim()
-              ? 'bg-[#2d2d2d] text-zinc-500 cursor-not-allowed border border-[#3e3e3e]'
-              : 'bg-[#0d66d0] hover:bg-[#1070e5] text-white'
-          }`}
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              <span>Diseñando Pieza Vectorial...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Diseñar Pieza con IA (SVG)</span>
-            </>
+      {/* 5. ARQUETIPOS DE ESTILO (MOTOR PROPIO) */}
+      <div className="p-3 border-b border-[#333333]">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            Arquetipo Visual
+          </span>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {compositionStyle}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          <button
+            onClick={() => onChangeCompositionStyle('split-left-right')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'split-left-right' || compositionStyle === 'sports-impact'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            ⚡ Matchday
+          </button>
+          <button
+            onClick={() => onChangeCompositionStyle('hero-center')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'hero-center'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            🎯 Hero Center
+          </button>
+          <button
+            onClick={() => onChangeCompositionStyle('cyber-tech')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'cyber-tech'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            💻 Cyber Tech
+          </button>
+          <button
+            onClick={() => onChangeCompositionStyle('minimal-editorial')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'minimal-editorial'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            💎 Luxury
+          </button>
+          <button
+            onClick={() => onChangeCompositionStyle('promo-bold')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'promo-bold'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            🏷️ Promo Bold
+          </button>
+          <button
+            onClick={() => onChangeCompositionStyle('story-vertical')}
+            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+              compositionStyle === 'story-vertical'
+                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
+                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
+            }`}
+          >
+            📱 Story 9:16
+          </button>
+        </div>
+      </div>
+
+      {/* 6. BOTÓN PRINCIPAL DE DISEÑO & VARIACIONES (MOTOR LOCAL SVG) */}
+      <div className="p-3 bg-[#222222] border-t border-[#333333] space-y-2">
+        <div className="flex items-center space-x-1.5">
+          <button
+            onClick={onGenerate}
+            disabled={isGenerating || !copyInput.headline.trim()}
+            className={`flex-1 py-2.5 px-3 rounded font-bold text-xs tracking-wide shadow-sm flex items-center justify-center space-x-2 transition ${
+              isGenerating || !copyInput.headline.trim()
+                ? 'bg-[#2d2d2d] text-zinc-500 cursor-not-allowed border border-[#3e3e3e]'
+                : 'bg-[#0d66d0] hover:bg-[#1070e5] text-white'
+            }`}
+            title="Generar diseño vectorial completo con el motor interno"
+          >
+            {isGenerating ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span>Diseñando...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Diseñar Pieza</span>
+              </>
+            )}
+          </button>
+
+          {onGenerateVariation && (
+            <button
+              onClick={onGenerateVariation}
+              disabled={isGenerating || !copyInput.headline.trim()}
+              className={`py-2.5 px-3 rounded font-bold text-xs border transition flex items-center space-x-1.5 shrink-0 ${
+                isGenerating || !copyInput.headline.trim()
+                  ? 'bg-[#2d2d2d] text-zinc-500 border-[#383838] cursor-not-allowed'
+                  : 'bg-[#2a2a2a] hover:bg-[#333333] text-amber-400 hover:text-amber-300 border-[#444444]'
+              }`}
+              title="Generar una variación alternativa (cambia iluminación, pesos y arquetipo)"
+            >
+              <Shuffle className="w-3.5 h-3.5 text-amber-400" />
+              <span>Var #{variationSeed + 1}</span>
+            </button>
           )}
-        </button>
-        <p className="text-[10px] text-zinc-500 text-center mt-1.5">
-          Capas vectoriales SVG 100% editables en tu mesa de trabajo.
+        </div>
+
+        <p className="text-[10px] text-zinc-400 text-center">
+          Motor propio local • Capas vectoriales 100% editables en el lienzo
         </p>
       </div>
 
