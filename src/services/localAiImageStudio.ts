@@ -247,13 +247,13 @@ export async function generateStudioImage({
 
   const NEGATIVE_PROMPT = '(watermark, logo, text, branding, signature:1.6), (deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), mutated hands, mutated fingers, extra fingers, missing fingers, poorly drawn face, bad anatomy, plastic skin, blurry, artifact';
 
-  // 1. SI EL USUARIO ELIGIÓ ESPECÍFICAMENTE DALL-E 3 DE OPENAI
+  // 1. SI EL USUARIO ELIGIÓ ESPECÍFICAMENTE MOTOR DE OPENAI
   if (selectedEngine === 'dalle') {
     if (!apiSettings?.openaiApiKey) {
-      throw new Error('Se requiere una clave de OpenAI (API Key) para usar DALL-E 3. Puedes ingresarla en Preferencias (ícono en la barra superior).');
+      throw new Error('Se requiere una clave de OpenAI (API Key) para usar este motor. Puedes ingresarla en Preferencias (ícono en la barra superior).');
     }
 
-    const sizeStr = width > height ? '1792x1024' : (height > width ? '1024x1792' : '1024x1024');
+    const sizeStr = width > height ? '1536x1024' : (height > width ? '1024x1536' : '1024x1024');
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -264,9 +264,7 @@ export async function generateStudioImage({
         prompt: englishPrompt,
         n: 1,
         size: sizeStr,
-        model: 'dall-e-3',
-        quality: 'hd',
-        response_format: 'url',
+        model: 'gpt-image-1.5',
       }),
     });
 
@@ -276,19 +274,23 @@ export async function generateStudioImage({
     }
 
     const d = await res.json();
-    const url = d.data?.[0]?.url;
-    if (!url) {
-      throw new Error('OpenAI no devolvió ninguna URL de imagen.');
+    let imgDataUrl = '';
+    if (d.data?.[0]?.b64_json) {
+      imgDataUrl = `data:image/png;base64,${d.data[0].b64_json}`;
+    } else if (d.data?.[0]?.url) {
+      imgDataUrl = d.data[0].url;
+    } else {
+      throw new Error('OpenAI no devolvió los datos de la imagen generada.');
     }
 
-    let cutoutUrl = url;
+    let cutoutUrl = imgDataUrl;
     if (cutoutBackground) {
-      cutoutUrl = await processCutoutFromUrl(url);
+      cutoutUrl = await processCutoutFromUrl(imgDataUrl);
     }
     return {
-      originalUrl: url,
+      originalUrl: imgDataUrl,
       cutoutUrl,
-      displayUrl: cutoutBackground ? cutoutUrl : url,
+      displayUrl: cutoutBackground ? cutoutUrl : imgDataUrl,
       promptUsed: englishPrompt,
       engineUsed: 'dalle',
       title: cleanTitle,
@@ -353,7 +355,7 @@ export async function generateStudioImage({
   // Si hay OpenAI Key configurada y activada, usar DALL-E 3 de forma transparente
   if (apiSettings?.enableLiveOpenAi && apiSettings?.openaiApiKey) {
     try {
-      const sizeStr = width > height ? '1792x1024' : (height > width ? '1024x1792' : '1024x1024');
+      const sizeStr = width > height ? '1536x1024' : (height > width ? '1024x1536' : '1024x1024');
       const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -364,23 +366,28 @@ export async function generateStudioImage({
           prompt: englishPrompt,
           n: 1,
           size: sizeStr,
-          model: 'dall-e-3',
-          response_format: 'url',
+          model: 'gpt-image-1.5',
         }),
       });
 
       if (res.ok) {
         const d = await res.json();
-        const url = d.data?.[0]?.url;
-        if (url) {
-          let cutoutUrl = url;
+        let imgDataUrl = '';
+        if (d.data?.[0]?.b64_json) {
+          imgDataUrl = `data:image/png;base64,${d.data[0].b64_json}`;
+        } else if (d.data?.[0]?.url) {
+          imgDataUrl = d.data[0].url;
+        }
+
+        if (imgDataUrl) {
+          let cutoutUrl = imgDataUrl;
           if (cutoutBackground) {
-            cutoutUrl = await processCutoutFromUrl(url);
+            cutoutUrl = await processCutoutFromUrl(imgDataUrl);
           }
           return {
-            originalUrl: url,
+            originalUrl: imgDataUrl,
             cutoutUrl,
-            displayUrl: cutoutBackground ? cutoutUrl : url,
+            displayUrl: cutoutBackground ? cutoutUrl : imgDataUrl,
             promptUsed: englishPrompt,
             engineUsed: 'dalle',
             title: cleanTitle,
