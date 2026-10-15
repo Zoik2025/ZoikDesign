@@ -6,6 +6,7 @@ export interface AiStudioGenerationOptions {
   category?: string;
   cutoutBackground?: boolean;
   aspectRatio?: '9:16' | '4:5' | '1:1' | '16:9';
+  selectedEngine?: 'dalle' | 'local-sd' | 'direct';
   localEndpoint?: string;
   apiSettings?: ApiSettings;
 }
@@ -235,63 +236,124 @@ export function optimizeAndTranslatePrompt(rawPrompt: string, overrideAspectRati
  */
 export async function generateStudioImage({
   prompt,
-  category,
+  category: _category,
   cutoutBackground = false,
   aspectRatio: overrideAspectRatio,
+  selectedEngine = 'direct',
   localEndpoint = 'http://127.0.0.1:7860',
   apiSettings,
 }: AiStudioGenerationOptions): Promise<AiStudioGenerationResult> {
   const { englishPrompt, width, height, aspectRatio, cleanTitle } = optimizeAndTranslatePrompt(prompt, overrideAspectRatio);
 
-  // 1. Probar Servidor Local de Difusión (Automatic1111 / Forge en localhost:7860)
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1800);
+  const NEGATIVE_PROMPT = '(watermark, logo, text, branding, signature:1.6), (deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), mutated hands, mutated fingers, extra fingers, missing fingers, poorly drawn face, bad anatomy, plastic skin, blurry, artifact';
 
-    const localCheck = await fetch(`${localEndpoint}/sdapi/v1/txt2img`, {
+  // 1. SI EL USUARIO ELIGIÓ ESPECÍFICAMENTE DALL-E 3 DE OPENAI
+  if (selectedEngine === 'dalle') {
+    if (!apiSettings?.openaiApiKey) {
+      throw new Error('Se requiere una clave de OpenAI (API Key) para usar DALL-E 3. Puedes ingresarla en Preferencias (ícono en la barra superior).');
+    }
+
+    const sizeStr = width > height ? '1792x1024' : (height > width ? '1024x1792' : '1024x1024');
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiSettings.openaiApiKey}`,
+      },
       body: JSON.stringify({
         prompt: englishPrompt,
-        steps: 20,
-        width,
-        height,
-        cfg_scale: 7,
+        n: 1,
+        size: sizeStr,
+        model: 'dall-e-3',
+        quality: 'hd',
+        response_format: 'url',
       }),
-      signal: controller.signal,
     });
-    clearTimeout(timeout);
 
-    if (localCheck.ok) {
-      const data = await localCheck.json();
-      if (data.images && data.images[0]) {
-        const base64Url = `data:image/png;base64,${data.images[0]}`;
-        let cutoutUrl = base64Url;
-
-        if (cutoutBackground) {
-          cutoutUrl = await processCutoutFromUrl(base64Url);
-        }
-
-        return {
-          originalUrl: base64Url,
-          cutoutUrl,
-          displayUrl: cutoutBackground ? cutoutUrl : base64Url,
-          promptUsed: englishPrompt,
-          engineUsed: 'local-sd',
-          title: cleanTitle,
-          isCutout: cutoutBackground,
-          aspectRatio,
-        };
-      }
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => ({}));
+      throw new Error(errorJson?.error?.message || `Error con OpenAI API: ${res.statusText}`);
     }
-  } catch {
-    // Servidor local no disponible, continuar con motor neuronal directo
+
+    const d = await res.json();
+    const url = d.data?.[0]?.url;
+    if (!url) {
+      throw new Error('OpenAI no devolvió ninguna URL de imagen.');
+    }
+
+    let cutoutUrl = url;
+    if (cutoutBackground) {
+      cutoutUrl = await processCutoutFromUrl(url);
+    }
+    return {
+      originalUrl: url,
+      cutoutUrl,
+      displayUrl: cutoutBackground ? cutoutUrl : url,
+      promptUsed: englishPrompt,
+      engineUsed: 'dalle',
+      title: cleanTitle,
+      isCutout: cutoutBackground,
+      aspectRatio,
+    };
   }
 
-  // 2. Si el usuario configuró API Key de OpenAI y la activó
+  // 2. SI EL USUARIO ELIGIÓ SERVIDOR LOCAL (OPCIÓN 3: GPU RTX 3050 - Forge / Automatic1111)
+  if (selectedEngine === 'local-sd') {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000); // Dar 60s a la GPU local
+
+      const localCheck = await fetch(`${localEndpoint}/sdapi/v1/txt2img`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: englishPrompt,
+          negative_prompt: NEGATIVE_PROMPT,
+          steps: 25,
+          width,
+          height,
+          cfg_scale: 7,
+          sampler_name: 'DPM++ 2M Karras',
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!localCheck.ok) {
+        throw new Error(`El servidor local respondió con estado ${localCheck.status}`);
+      }
+
+      const data = await localCheck.json();
+      if (!data.images || !data.images[0]) {
+        throw new Error('El servidor local no devolvió ninguna imagen en la respuesta.');
+      }
+
+      const base64Url = `data:image/png;base64,${data.images[0]}`;
+      let cutoutUrl = base64Url;
+      if (cutoutBackground) {
+        cutoutUrl = await processCutoutFromUrl(base64Url);
+      }
+
+      return {
+        originalUrl: base64Url,
+        cutoutUrl,
+        displayUrl: cutoutBackground ? cutoutUrl : base64Url,
+        promptUsed: englishPrompt,
+        engineUsed: 'local-sd',
+        title: cleanTitle,
+        isCutout: cutoutBackground,
+        aspectRatio,
+      };
+    } catch (err: any) {
+      throw new Error(`No se pudo conectar al servidor local en ${localEndpoint}. Asegúrate de iniciar Stable Diffusion Forge o Automatic1111 con el parámetro --api en tu tarjeta NVIDIA RTX 3050.`);
+    }
+  }
+
+  // 3. MOTOR AUTOMÁTICO / DIRECTO:
+  // Si hay OpenAI Key configurada y activada, usar DALL-E 3 de forma transparente
   if (apiSettings?.enableLiveOpenAi && apiSettings?.openaiApiKey) {
     try {
-      const sizeStr = width > height ? '1024x1024' : (height > width ? '1024x1792' : '1024x1024');
+      const sizeStr = width > height ? '1792x1024' : (height > width ? '1024x1792' : '1024x1024');
       const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -301,7 +363,7 @@ export async function generateStudioImage({
         body: JSON.stringify({
           prompt: englishPrompt,
           n: 1,
-          size: sizeStr === '1024x1792' ? '1024x1792' : '1024x1024',
+          size: sizeStr,
           model: 'dall-e-3',
           response_format: 'url',
         }),
@@ -327,37 +389,38 @@ export async function generateStudioImage({
           };
         }
       }
-    } catch (err) {
-      console.warn('Error con API OpenAI, recurriendo a motor neuronal directo:', err);
+    } catch (openAiErr) {
+      console.warn('Llamada a OpenAI falló, recurriendo a motor directo:', openAiErr);
     }
   }
 
-  // 3. MOTOR NEURONAL DE DIFUSIÓN EN TIEMPO REAL (ZERO COST / ANY PROMPT)
-  // Genera exactamente la escena descrita por el usuario sin límite de temas
+  // 4. MOTOR DE SÍNTESIS DIRECTO (CERO COSTO) CON ELIMINACIÓN DE MARCAS DE AGUA
   try {
     const randomSeed = Math.floor(Math.random() * 900000) + 100000;
     const encoded = encodeURIComponent(englishPrompt);
-    const neuralUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${randomSeed}&model=turbo`;
+    const neuralUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${randomSeed}&model=turbo`;
 
-    // Descargar imagen y convertir a DataURL base64 para independencia completa
     const imageResponse = await fetch(neuralUrl, { method: 'GET' });
     if (imageResponse.ok) {
       const blob = await imageResponse.blob();
-      const base64DataUrl = await blobToDataUrl(blob);
+      const rawBase64 = await blobToDataUrl(blob);
+
+      // Eliminar permanentemente la franja inferior con marca de agua
+      const cleanBase64 = await removeWatermarkBanner(rawBase64);
 
       let cutoutUrl: string | undefined = undefined;
       if (cutoutBackground) {
         try {
-          cutoutUrl = await processCutoutFromUrl(base64DataUrl);
+          cutoutUrl = await processCutoutFromUrl(cleanBase64);
         } catch {
-          cutoutUrl = base64DataUrl;
+          cutoutUrl = cleanBase64;
         }
       }
 
       return {
-        originalUrl: base64DataUrl,
+        originalUrl: cleanBase64,
         cutoutUrl,
-        displayUrl: cutoutBackground && cutoutUrl ? cutoutUrl : base64DataUrl,
+        displayUrl: cutoutBackground && cutoutUrl ? cutoutUrl : cleanBase64,
         promptUsed: englishPrompt,
         engineUsed: 'neural-diffusion',
         title: cleanTitle,
@@ -366,10 +429,10 @@ export async function generateStudioImage({
       };
     }
   } catch (neuralErr) {
-    console.warn('Error en conexión con motor de difusión, intentando fallback fotográfico:', neuralErr);
+    console.warn('Error en conexión con motor de difusión:', neuralErr);
   }
 
-  // 4. Fallback de Banco de Presets si no hay conexión a internet
+  // 5. Fallback si no hay conexión
   const matchedPreset = PROMPT_INSPIRATION_PRESETS.find((p) => {
     const kws = p.prompt.toLowerCase().split(/\s+/).concat(p.title.toLowerCase().split(/\s+/));
     return kws.some((w) => w.length > 4 && prompt.toLowerCase().includes(w));
@@ -420,3 +483,38 @@ async function processCutoutFromUrl(imageUrl: string): Promise<string> {
     img.src = imageUrl;
   });
 }
+
+/**
+ * Elimina permanentemente la franja inferior con marca de agua recortando la base
+ */
+async function removeWatermarkBanner(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Si la imagen es muy pequeña no recortamos
+      const bannerHeight = Math.round(img.height * 0.045); // ~4.5% inferior
+      if (img.height <= bannerHeight * 2 || bannerHeight <= 0) {
+        resolve(dataUrl);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height - bannerHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(
+        img,
+        0, 0, img.width, img.height - bannerHeight,
+        0, 0, img.width, img.height - bannerHeight
+      );
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+

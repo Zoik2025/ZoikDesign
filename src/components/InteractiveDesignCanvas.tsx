@@ -204,14 +204,24 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
   useEffect(() => {
     activeToolRef.current = activeTool;
     if (!fabricCanvas) return;
-    if (activeTool === 'text') {
-      fabricCanvas.defaultCursor = 'text';
-    } else if (activeTool === 'shape-rect' || activeTool === 'shape-circle') {
+    if (activeTool === 'pen') {
+      fabricCanvas.isDrawingMode = true;
+      if (fabricCanvas.freeDrawingBrush) {
+        fabricCanvas.freeDrawingBrush.width = 3;
+        fabricCanvas.freeDrawingBrush.color = brand.colors.primary || '#0d66d0';
+      }
       fabricCanvas.defaultCursor = 'crosshair';
     } else {
-      fabricCanvas.defaultCursor = 'default';
+      fabricCanvas.isDrawingMode = false;
+      if (activeTool === 'text') {
+        fabricCanvas.defaultCursor = 'text';
+      } else if (activeTool === 'shape-rect' || activeTool === 'shape-circle' || activeTool === 'line') {
+        fabricCanvas.defaultCursor = 'crosshair';
+      } else {
+        fabricCanvas.defaultCursor = 'default';
+      }
     }
-  }, [activeTool, fabricCanvas]);
+  }, [activeTool, fabricCanvas, brand.colors.primary]);
 
   function isEditingText(canvas: fabric.Canvas): boolean {
     const active = canvas.getActiveObject();

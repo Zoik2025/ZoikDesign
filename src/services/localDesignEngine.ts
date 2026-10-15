@@ -189,7 +189,7 @@ export async function generateLocalDesignPiece({
   try {
     const carbonCanvas = createCarbonFiberCanvas();
     const pattern = new fabric.Pattern({
-      source: carbonCanvas,
+      source: carbonCanvas as any,
       repeat: 'repeat',
     });
     const textureRect = new fabric.Rect({
@@ -665,7 +665,7 @@ function renderProceduralHeroMotif(
         { offset: 1, color: '#04070d' },
       ],
     }),
-    stroke: new fabric.Gradient({
+    stroke: (new fabric.Gradient({
       type: 'linear',
       coords: { x1: -140, y1: -170, x2: 140, y2: 160 },
       colorStops: [
@@ -674,7 +674,7 @@ function renderProceduralHeroMotif(
         { offset: 0.7, color: '#b8860b' },
         { offset: 1, color: '#fff3b0' },
       ],
-    }),
+    }) as any),
     strokeWidth: 6,
   });
 

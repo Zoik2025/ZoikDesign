@@ -25,11 +25,13 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
   onSetAsHeroSubject,
   onInsertToCanvas,
 }) => {
-  const [prompt, setPrompt] = useState('Mujer celebrando con su celular en la mano alzada, feliz y viendo al cielo con dicha y felicidad, formato 9:16');
+  const [prompt, setPrompt] = useState('Mujer dominicana celebrando con su celular en la mano alzada, feliz y viendo al cielo con dicha y felicidad, formato 9:16');
   const [cutoutBackground, setCutoutBackground] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '4:5' | '1:1' | '16:9'>('9:16');
+  const [selectedEngine, setSelectedEngine] = useState<'local-sd' | 'dalle' | 'direct'>('direct');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<AiStudioGenerationResult | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [localEndpoint, setLocalEndpoint] = useState('http://127.0.0.1:7860');
@@ -40,16 +42,25 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
   const handleSelectPreset = (p: typeof PROMPT_INSPIRATION_PRESETS[0]) => {
     setPrompt(p.prompt);
     setAspectRatio(p.aspectRatio);
+    setErrorMessage(null);
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
+    setErrorMessage(null);
     setGenerationStep('Analizando y traduciendo prompt con Director de Arte...');
 
     try {
-      setTimeout(() => setGenerationStep('Generando con red neuronal de difusión en tiempo real...'), 400);
+      if (selectedEngine === 'dalle') {
+        setGenerationStep('Conectando con OpenAI DALL-E 3 HD (1024×1792)...');
+      } else if (selectedEngine === 'local-sd') {
+        setGenerationStep(`Procesando en GPU Local NVIDIA RTX 3050 (${localEndpoint})...`);
+      } else {
+        setTimeout(() => setGenerationStep('Generando con red neuronal y limpiando marcas...'), 400);
+      }
+
       if (cutoutBackground) {
         setTimeout(() => setGenerationStep('Aplicando recorte inteligente de fondo...'), 3500);
       }
@@ -58,14 +69,16 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
         prompt,
         cutoutBackground,
         aspectRatio,
+        selectedEngine,
         localEndpoint,
         apiSettings,
       });
 
       setResult(res);
       setShowOriginal(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generando imagen IA:', err);
+      setErrorMessage(err?.message || 'Error inesperado al generar la imagen');
     } finally {
       setIsGenerating(false);
       setGenerationStep('');
@@ -207,7 +220,74 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
             </div>
           </div>
 
-          {/* GENERATION CONTROLS */}
+          {/* SELECTOR DE MOTOR DE IA */}
+          <div className="bg-[#131316] border border-[#27272a] rounded-lg p-3 space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+              Motor de Síntesis IA (Elige la Calidad de Generación)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              
+              {/* Opción 3: GPU Local RTX 3050 */}
+              <button
+                type="button"
+                onClick={() => { setSelectedEngine('local-sd'); setErrorMessage(null); }}
+                className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
+                  selectedEngine === 'local-sd'
+                    ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500'
+                    : 'bg-[#1b1b1e] border-[#2e2e33] text-zinc-400 hover:text-white hover:border-[#3e3e44]'
+                }`}
+              >
+                <div className="flex items-center space-x-1.5 font-bold text-xs text-white mb-0.5">
+                  <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>GPU Local (RTX 3050)</span>
+                </div>
+                <span className="text-[10px] text-zinc-400 leading-tight">
+                  100% en tu PC • 6GB VRAM • Sin límites ni marcas
+                </span>
+              </button>
+
+              {/* Opción 1: OpenAI DALL-E 3 */}
+              <button
+                type="button"
+                onClick={() => { setSelectedEngine('dalle'); setErrorMessage(null); }}
+                className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
+                  selectedEngine === 'dalle'
+                    ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500'
+                    : 'bg-[#1b1b1e] border-[#2e2e33] text-zinc-400 hover:text-white hover:border-[#3e3e44]'
+                }`}
+              >
+                <div className="flex items-center space-x-1.5 font-bold text-xs text-white mb-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>OpenAI DALL-E 3 HD</span>
+                </div>
+                <span className="text-[10px] text-zinc-400 leading-tight">
+                  {apiSettings?.openaiApiKey ? '🟢 Clave activa (1024×1792)' : 'Requiere clave en Preferencias'}
+                </span>
+              </button>
+
+              {/* Opción Directa / Rápida */}
+              <button
+                type="button"
+                onClick={() => { setSelectedEngine('direct'); setErrorMessage(null); }}
+                className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
+                  selectedEngine === 'direct'
+                    ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500'
+                    : 'bg-[#1b1b1e] border-[#2e2e33] text-zinc-400 hover:text-white hover:border-[#3e3e44]'
+                }`}
+              >
+                <div className="flex items-center space-x-1.5 font-bold text-xs text-white mb-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Síntesis Rápida (Nube)</span>
+                </div>
+                <span className="text-[10px] text-zinc-400 leading-tight">
+                  Cero configuración • Sin marca de agua
+                </span>
+              </button>
+
+            </div>
+          </div>
+
+          {/* GENERATION OPTIONS */}
           <div className="bg-[#131316] border border-[#27272a] rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center space-x-2 cursor-pointer select-none">
               <input
@@ -224,20 +304,22 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
               </div>
             </label>
 
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-[11px] text-zinc-400 hover:text-white flex items-center space-x-1"
-            >
-              <Cpu className="w-3 h-3 text-zinc-400" />
-              <span>Servidor Local GPU (Opcional)</span>
-            </button>
+            {selectedEngine === 'local-sd' && (
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-[11px] text-zinc-400 hover:text-white flex items-center space-x-1"
+              >
+                <Cpu className="w-3 h-3 text-zinc-400" />
+                <span>Endpoint: {localEndpoint}</span>
+              </button>
+            )}
           </div>
 
-          {/* ADVANCED SERVER SETTINGS */}
-          {showAdvanced && (
+          {/* ADVANCED LOCAL ENDPOINT SETTINGS */}
+          {showAdvanced && selectedEngine === 'local-sd' && (
             <div className="p-3 bg-[#111114] border border-[#2e2e33] rounded-lg space-y-2 text-xs">
               <label className="text-[11px] font-semibold text-zinc-300 block">
-                URL de Servidor Difusor Local (Automatic1111 / Forge / SD DirectML)
+                URL de Servidor Difusor Local (Forge / Automatic1111 con --api)
               </label>
               <input
                 type="text"
@@ -247,8 +329,28 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
                 className="w-full bg-[#1b1b1e] border border-[#38383e] rounded px-2.5 py-1.5 text-xs text-white"
               />
               <p className="text-[10px] text-zinc-400">
-                Por defecto, Zoik Design utiliza el motor neuronal directo en la nube sin costo ni registro. Si tienes Automatic1111 en tu GPU, puedes ingresar su URL aquí.
+                Inicia Automatic1111 o Stable Diffusion WebUI Forge en tu PC ejecutando con el argumento <code>--api</code>. Zoik Design enviará tus prompts directamente a tu RTX 3050.
               </p>
+            </div>
+          )}
+
+          {/* ERROR MESSAGE BANNER */}
+          {errorMessage && (
+            <div className="p-3 bg-red-950/60 border border-red-500/40 rounded-lg text-xs text-red-200 space-y-1">
+              <div className="font-bold flex items-center space-x-1.5">
+                <span className="text-red-400">⚠️ Aviso:</span>
+                <span>{errorMessage}</span>
+              </div>
+              {selectedEngine === 'local-sd' && (
+                <p className="text-[11px] text-red-300/80">
+                  Tip: Para usar tu GPU RTX 3050, inicia Forge o Automatic1111 con el parámetro <code>--api</code>. O selecciona <strong>OpenAI DALL-E 3</strong> o <strong>Síntesis Rápida</strong> para generar de inmediato.
+                </p>
+              )}
+              {selectedEngine === 'dalle' && (
+                <p className="text-[11px] text-red-300/80">
+                  Tip: Puedes ingresar tu clave de OpenAI en el icono de <strong>Preferencias (llave)</strong> de la barra superior.
+                </p>
+              )}
             </div>
           )}
 
@@ -270,7 +372,9 @@ export const LocalAiImageModal: React.FC<LocalAiImageModalProps> = ({
             ) : (
               <>
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>Generar Imagen con IA Neuronal</span>
+                <span>
+                  Generar con {selectedEngine === 'dalle' ? 'OpenAI DALL-E 3' : (selectedEngine === 'local-sd' ? 'GPU Local RTX 3050' : 'Síntesis Rápida')}
+                </span>
               </>
             )}
           </button>

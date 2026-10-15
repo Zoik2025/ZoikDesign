@@ -112,6 +112,11 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
     }
   };
 
+  const handleApplyCustomFont = () => {
+    if (!customFontInput.trim()) return;
+    updateActiveFont(customFontInput.trim());
+  };
+
   const updateActiveSize = (size: number) => {
     setObjSize(size);
     if (selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'text')) {

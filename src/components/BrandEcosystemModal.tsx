@@ -42,7 +42,7 @@ export const BrandEcosystemModal: React.FC<BrandEcosystemModalProps> = ({
             title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
             imageUrl: event.target.result as string,
             format: '4:5',
-            layoutStructure: 'hero-split',
+            layoutStructure: 'split-left-right',
             hierarchyNotes: 'Titular H1 destacado, producto en segundo tercio, badge y botón inferior.',
           };
           newPieces.unshift(piece);
