@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { fabric } from 'fabric';
 import type { BrandKit, DocumentConfig } from '../types';
 import type { SystemFontInfo } from '../data/systemFonts';
@@ -9,8 +9,9 @@ import {
   Download, Image as ImageIcon, Type, Square, 
   Trash2, MoveUp, MoveDown, Copy, 
   AlignLeft, AlignCenter, AlignRight,
-  Scissors, RefreshCw, Upload, FilePlus,
-  Eraser, Check
+  AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
+  AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd,
+  Scissors, Upload, FilePlus, Eraser
 } from 'lucide-react';
 
 interface TopControlBarProps {
@@ -41,10 +42,43 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
   const replaceImageInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingBg, setIsProcessingBg] = useState(false);
 
+  // Transform coordinates (X, Y, W, H) in px
+  const [objX, setObjX] = useState<number>(0);
+  const [objY, setObjY] = useState<number>(0);
+  const [objW, setObjW] = useState<number>(0);
+  const [objH, setObjH] = useState<number>(0);
+
+  // Sync transform metrics when selected object changes or moves
+  useEffect(() => {
+    if (!selectedObject) return;
+    const updateMetrics = () => {
+      setObjX(Math.round(selectedObject.left || 0));
+      setObjY(Math.round(selectedObject.top || 0));
+      setObjW(Math.round(selectedObject.getScaledWidth() || 0));
+      setObjH(Math.round(selectedObject.getScaledHeight() || 0));
+    };
+
+    updateMetrics();
+
+    if (fabricCanvas) {
+      fabricCanvas.on('object:moving', updateMetrics);
+      fabricCanvas.on('object:scaling', updateMetrics);
+      fabricCanvas.on('object:modified', updateMetrics);
+    }
+
+    return () => {
+      if (fabricCanvas) {
+        fabricCanvas.off('object:moving', updateMetrics);
+        fabricCanvas.off('object:scaling', updateMetrics);
+        fabricCanvas.off('object:modified', updateMetrics);
+      }
+    };
+  }, [selectedObject, fabricCanvas]);
+
   // Identify selected object type
   const isText = selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'text');
   const isImage = selectedObject && (selectedObject.type === 'image');
-  const isShape = selectedObject && (selectedObject.type === 'rect' || selectedObject.type === 'circle');
+  const isShape = selectedObject && (selectedObject.type === 'rect' || selectedObject.type === 'circle' || selectedObject.type === 'group' || selectedObject.type === 'path');
 
   // Object-specific values
   const textObj = isText ? (selectedObject as fabric.IText) : null;
@@ -52,6 +86,8 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
   const currentFontSize = textObj ? Math.round(textObj.fontSize || 32) : 32;
   const currentFontWeight = textObj ? String(textObj.fontWeight || '700') : '700';
   const currentFill = selectedObject ? String(selectedObject.fill || '#ffffff') : '#ffffff';
+  const currentStroke = selectedObject ? String(selectedObject.stroke || '#000000') : '#000000';
+  const currentStrokeWidth = selectedObject ? Number(selectedObject.strokeWidth || 0) : 0;
   const currentTextAlign = textObj ? (textObj.textAlign || 'left') : 'left';
   const currentOpacity = selectedObject ? Math.round((selectedObject.opacity ?? 1) * 100) : 100;
 
@@ -65,7 +101,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
 
   const handleFontSizeChange = (delta: number) => {
     if (!textObj || !fabricCanvas) return;
-    const newSize = Math.max(10, Math.min(240, (textObj.fontSize || 32) + delta));
+    const newSize = Math.max(8, Math.min(300, (textObj.fontSize || 32) + delta));
     textObj.set('fontSize', newSize);
     fabricCanvas.renderAll();
   };
@@ -82,6 +118,29 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
     fabricCanvas.renderAll();
   };
 
+  const handleStrokeColorChange = (color: string) => {
+    if (!selectedObject || !fabricCanvas) return;
+    selectedObject.set('stroke', color);
+    if (!selectedObject.strokeWidth) {
+      selectedObject.set('strokeWidth', 2);
+    }
+    fabricCanvas.renderAll();
+  };
+
+  const handleStrokeWidthChange = (delta: number) => {
+    if (!selectedObject || !fabricCanvas) return;
+    const current = selectedObject.strokeWidth || 0;
+    const nextW = Math.max(0, Math.min(60, current + delta));
+    selectedObject.set('strokeWidth', nextW);
+    fabricCanvas.renderAll();
+  };
+
+  const handleOpacityChange = (newVal: number) => {
+    if (!selectedObject || !fabricCanvas) return;
+    selectedObject.set('opacity', Math.max(0, Math.min(100, newVal)) / 100);
+    fabricCanvas.renderAll();
+  };
+
   const handleTextAlignChange = (align: 'left' | 'center' | 'right') => {
     if (!textObj || !fabricCanvas) return;
     textObj.set('textAlign', align);
@@ -92,6 +151,51 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
     if (!textObj || !fabricCanvas || !textObj.text) return;
     const isUpper = textObj.text === textObj.text.toUpperCase();
     textObj.set('text', isUpper ? textObj.text.toLowerCase() : textObj.text.toUpperCase());
+    fabricCanvas.renderAll();
+  };
+
+  // Illustrator Alignment Operators
+  const handleAlign = (type: 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom') => {
+    if (!selectedObject || !fabricCanvas) return;
+    const artW = docConfig.width;
+    const artH = docConfig.height;
+
+    switch (type) {
+      case 'left':
+        selectedObject.set('left', 0);
+        break;
+      case 'center-h':
+        selectedObject.centerH();
+        break;
+      case 'right':
+        selectedObject.set('left', artW - selectedObject.getScaledWidth());
+        break;
+      case 'top':
+        selectedObject.set('top', 0);
+        break;
+      case 'center-v':
+        selectedObject.centerV();
+        break;
+      case 'bottom':
+        selectedObject.set('top', artH - selectedObject.getScaledHeight());
+        break;
+    }
+    selectedObject.setCoords();
+    fabricCanvas.renderAll();
+  };
+
+  // Transform input adjustments (X, Y, W, H)
+  const handleSetX = (val: number) => {
+    if (!selectedObject || !fabricCanvas) return;
+    selectedObject.set('left', val);
+    selectedObject.setCoords();
+    fabricCanvas.renderAll();
+  };
+
+  const handleSetY = (val: number) => {
+    if (!selectedObject || !fabricCanvas) return;
+    selectedObject.set('top', val);
+    selectedObject.setCoords();
     fabricCanvas.renderAll();
   };
 
@@ -154,34 +258,33 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
         fabricCanvas.add(newImg);
         fabricCanvas.setActiveObject(newImg);
         fabricCanvas.renderAll();
-        setIsProcessingBg(false);
       }, { crossOrigin: 'anonymous' });
     } catch (err) {
-      console.error('Error al quitar fondo:', err);
+      console.error('Error recortando fondo:', err);
+    } finally {
       setIsProcessingBg(false);
     }
   };
 
-  // Layer hierarchy controls
+  // Layer ordering and duplication
   const handleBringForward = () => {
-    if (!selectedObject || !fabricCanvas) return;
+    if (!fabricCanvas || !selectedObject) return;
     fabricCanvas.bringForward(selectedObject);
     fabricCanvas.renderAll();
   };
 
   const handleSendBackward = () => {
-    if (!selectedObject || !fabricCanvas) return;
+    if (!fabricCanvas || !selectedObject) return;
     fabricCanvas.sendBackwards(selectedObject);
     fabricCanvas.renderAll();
   };
 
   const handleDuplicate = () => {
-    if (!selectedObject || !fabricCanvas) return;
+    if (!fabricCanvas || !selectedObject) return;
     selectedObject.clone((cloned: fabric.Object) => {
       cloned.set({
-        left: (cloned.left || 0) + 20,
-        top: (cloned.top || 0) + 20,
-        evented: true,
+        left: (cloned.left || 0) + 30,
+        top: (cloned.top || 0) + 30,
       });
       fabricCanvas.add(cloned);
       fabricCanvas.setActiveObject(cloned);
@@ -190,7 +293,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
   };
 
   const handleDelete = () => {
-    if (!selectedObject || !fabricCanvas) return;
+    if (!fabricCanvas || !selectedObject) return;
     fabricCanvas.remove(selectedObject);
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
@@ -210,50 +313,90 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
     });
   };
 
-  const paletteColors = [
-    brand.colors.primary,
-    brand.colors.secondary,
-    brand.colors.accent,
-    brand.colors.textPrimary,
-    brand.colors.backgroundDark,
-    '#ffffff',
-    '#000000',
-  ];
-
   return (
-    <div className="h-10 bg-[#262626] border-b border-[#383838] flex items-center justify-between px-3 text-xs select-none z-20 shrink-0 text-[#d4d4d8]">
+    <div className="h-10 bg-[#242424] border-b border-[#333333] flex items-center justify-between px-3 text-xs select-none z-20 shrink-0 text-[#d4d4d8]">
       
-      {/* LEFT: CONTEXT-SENSITIVE CONTROLS */}
-      <div className="flex items-center space-x-2 overflow-x-auto custom-scroll py-0.5">
+      {/* LEFT: CONTEXT-SENSITIVE CONTROLS (ADOBE ILLUSTRATOR CONTROL STRIP) */}
+      <div className="flex items-center space-x-2.5 overflow-x-auto custom-scroll py-0.5">
         
+        {/* ============================================================== */}
         {/* CASE 1: TEXT SELECTED */}
+        {/* ============================================================== */}
         {isText && (
           <div className="flex items-center space-x-2">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center space-x-1">
-              <Type className="w-3.5 h-3.5 text-[#388bff]" />
-              <span>Carácter:</span>
+            
+            {/* Swatches: Fill & Stroke (Classic Illustrator Popovers) */}
+            <div className="flex items-center space-x-1 border-r border-[#3a3a3a] pr-2">
+              <label 
+                className="w-5 h-5 rounded-sm border border-[#555555] cursor-pointer shadow-sm relative overflow-hidden"
+                style={{ backgroundColor: currentFill }}
+                title={`Color de Relleno: ${currentFill}`}
+              >
+                <input 
+                  type="color" 
+                  value={currentFill.startsWith('#') ? currentFill : '#ffffff'} 
+                  onChange={(e) => handleColorChange(e.target.value)} 
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
+
+              <label 
+                className="w-5 h-5 rounded-sm border-2 cursor-pointer shadow-sm relative overflow-hidden bg-transparent"
+                style={{ borderColor: currentStroke }}
+                title={`Color de Trazo: ${currentStroke}`}
+              >
+                <input 
+                  type="color" 
+                  value={currentStroke.startsWith('#') ? currentStroke : '#000000'} 
+                  onChange={(e) => handleStrokeColorChange(e.target.value)} 
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
+
+              <div className="flex items-center bg-[#1a1a1a] border border-[#3e3e3e] rounded px-1 py-0.5 text-[10px] font-mono text-zinc-300 ml-1">
+                <span>{currentStrokeWidth} pt</span>
+              </div>
+            </div>
+
+            {/* Typography Engine */}
+            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+              Carácter:
             </span>
 
             {/* Font selector */}
             <select
               value={currentFont}
               onChange={(e) => handleFontChange(e.target.value)}
-              className="bg-[#1e1e1e] border border-[#3e3e3e] text-white px-2 py-1 rounded text-xs focus:outline-none focus:border-[#0d66d0] max-w-[130px] truncate"
+              className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-2 py-1 rounded text-xs focus:outline-none focus:border-[#0d66d0] max-w-[140px] truncate"
             >
+              <option value={brand.typography.headlineFont}>★ {brand.typography.headlineFont} (Marca)</option>
               <optgroup label="Fuentes del Sistema (PC)">
                 {localPcFonts.slice(0, 15).map(f => (
                   <option key={f.name} value={f.name}>{f.name}</option>
                 ))}
               </optgroup>
-              <optgroup label="Catálogo Google Fonts">
+              <optgroup label="Google Fonts Pro">
                 {FONT_CATALOG.map(f => (
                   <option key={f.name} value={f.name}>{f.name}</option>
                 ))}
               </optgroup>
             </select>
 
-            {/* Font size */}
-            <div className="flex items-center bg-[#1e1e1e] border border-[#3e3e3e] rounded overflow-hidden">
+            {/* Weight selector */}
+            <select
+              value={currentFontWeight}
+              onChange={(e) => handleFontWeightChange(e.target.value)}
+              className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1.5 py-1 rounded text-[11px] focus:outline-none"
+            >
+              <option value="400">Regular</option>
+              <option value="600">Semibold</option>
+              <option value="700">Bold</option>
+              <option value="800">ExtraBold</option>
+              <option value="900">Black</option>
+            </select>
+
+            {/* Font size stepper */}
+            <div className="flex items-center bg-[#1a1a1a] border border-[#3e3e3e] rounded overflow-hidden">
               <button 
                 onClick={() => handleFontSizeChange(-2)} 
                 className="px-1.5 py-1 hover:bg-[#333333] text-zinc-400 hover:text-white"
@@ -262,7 +405,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
                 -
               </button>
               <span className="px-1.5 font-mono text-[11px] text-white min-w-[28px] text-center">
-                {currentFontSize}
+                {currentFontSize} pt
               </span>
               <button 
                 onClick={() => handleFontSizeChange(2)} 
@@ -273,21 +416,8 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
               </button>
             </div>
 
-            {/* Font weight */}
-            <select
-              value={currentFontWeight}
-              onChange={(e) => handleFontWeightChange(e.target.value)}
-              className="bg-[#1e1e1e] border border-[#3e3e3e] text-white px-1.5 py-1 rounded text-[11px] focus:outline-none"
-            >
-              <option value="400">Normal</option>
-              <option value="600">Semibold</option>
-              <option value="700">Bold</option>
-              <option value="800">ExtraBold</option>
-              <option value="900">Black</option>
-            </select>
-
             {/* Alignments */}
-            <div className="flex items-center bg-[#1e1e1e] border border-[#3e3e3e] rounded">
+            <div className="flex items-center bg-[#1a1a1a] border border-[#3e3e3e] rounded">
               <button
                 onClick={() => handleTextAlignChange('left')}
                 className={`p-1 hover:bg-[#333333] transition ${currentTextAlign === 'left' ? 'text-[#388bff]' : 'text-zinc-400'}`}
@@ -311,39 +441,172 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
               </button>
             </div>
 
-            {/* Color chips */}
-            <div className="flex items-center space-x-1 pl-1">
-              {paletteColors.map((c, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleColorChange(c)}
-                  className={`w-4 h-4 rounded border ${currentFill.toLowerCase() === c.toLowerCase() ? 'border-[#388bff] ring-1 ring-[#388bff]' : 'border-[#444444]'}`}
-                  style={{ backgroundColor: c }}
-                  title={`Color: ${c}`}
-                />
-              ))}
-            </div>
-
             {/* Caps Toggle */}
             <button
               onClick={handleToggleCase}
-              className="px-2 py-0.5 rounded bg-[#1e1e1e] border border-[#3e3e3e] hover:bg-[#333333] text-[11px] font-semibold text-zinc-300"
+              className="px-2 py-1 rounded bg-[#1a1a1a] border border-[#3e3e3e] hover:bg-[#333333] text-[11px] font-semibold text-zinc-300 transition"
               title="Alternar Mayúsculas / Minúsculas"
             >
               Aa
             </button>
+
+            {/* Opacity */}
+            <div className="flex items-center space-x-1 pl-1 text-[11px] text-zinc-400 font-mono">
+              <span>Opacidad:</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={currentOpacity}
+                onChange={(e) => handleOpacityChange(Number(e.target.value))}
+                className="w-12 bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1 py-0.5 rounded text-[11px] text-center focus:outline-none"
+              />
+              <span>%</span>
+            </div>
+
           </div>
         )}
 
-        {/* CASE 2: IMAGE SELECTED */}
+        {/* ============================================================== */}
+        {/* CASE 2: SHAPE OR VECTOR GROUP SELECTED */}
+        {/* ============================================================== */}
+        {isShape && !isText && (
+          <div className="flex items-center space-x-2.5">
+            
+            {/* Fill & Stroke Swatches */}
+            <div className="flex items-center space-x-1 border-r border-[#3a3a3a] pr-2.5">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase mr-1">Relleno:</span>
+              <label 
+                className="w-5 h-5 rounded-sm border border-[#555555] cursor-pointer shadow-sm relative overflow-hidden"
+                style={{ backgroundColor: currentFill }}
+                title={`Color de Relleno: ${currentFill}`}
+              >
+                <input 
+                  type="color" 
+                  value={currentFill.startsWith('#') ? currentFill : '#ffffff'} 
+                  onChange={(e) => handleColorChange(e.target.value)} 
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
+
+              <span className="text-[10px] text-zinc-400 font-bold uppercase ml-2 mr-1">Trazo:</span>
+              <label 
+                className="w-5 h-5 rounded-sm border-2 cursor-pointer shadow-sm relative overflow-hidden bg-transparent"
+                style={{ borderColor: currentStroke }}
+                title={`Color de Trazo: ${currentStroke}`}
+              >
+                <input 
+                  type="color" 
+                  value={currentStroke.startsWith('#') ? currentStroke : '#000000'} 
+                  onChange={(e) => handleStrokeColorChange(e.target.value)} 
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
+
+              <div className="flex items-center bg-[#1a1a1a] border border-[#3e3e3e] rounded overflow-hidden ml-1">
+                <button onClick={() => handleStrokeWidthChange(-1)} className="px-1 text-zinc-400 hover:text-white">-</button>
+                <span className="px-1.5 font-mono text-[10px] text-zinc-200">{currentStrokeWidth} pt</span>
+                <button onClick={() => handleStrokeWidthChange(1)} className="px-1 text-zinc-400 hover:text-white">+</button>
+              </div>
+            </div>
+
+            {/* Vector Alignment Cluster */}
+            <div className="flex items-center space-x-0.5 border-r border-[#3a3a3a] pr-2.5">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase mr-1">Alinear:</span>
+              <button 
+                onClick={() => handleAlign('left')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Alinear a la izquierda de la mesa"
+              >
+                <AlignHorizontalJustifyStart className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => handleAlign('center-h')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Centrar horizontalmente"
+              >
+                <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => handleAlign('right')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Alinear a la derecha"
+              >
+                <AlignHorizontalJustifyEnd className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => handleAlign('top')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Alinear arriba"
+              >
+                <AlignVerticalJustifyStart className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => handleAlign('center-v')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Centrar verticalmente"
+              >
+                <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => handleAlign('bottom')} 
+                className="p-1 rounded hover:bg-[#333333] text-zinc-300 hover:text-white" 
+                title="Alinear abajo"
+              >
+                <AlignVerticalJustifyEnd className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Numeric Transform (X, Y, W, H) */}
+            <div className="flex items-center space-x-1.5 font-mono text-[11px] text-zinc-400">
+              <span className="text-zinc-500">X:</span>
+              <input 
+                type="number" 
+                value={objX} 
+                onChange={(e) => handleSetX(Number(e.target.value))}
+                className="w-12 bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1 py-0.5 rounded text-[11px] text-center focus:outline-none" 
+              />
+              <span className="text-zinc-500">Y:</span>
+              <input 
+                type="number" 
+                value={objY} 
+                onChange={(e) => handleSetY(Number(e.target.value))}
+                className="w-12 bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1 py-0.5 rounded text-[11px] text-center focus:outline-none" 
+              />
+              <span className="text-zinc-500">W:</span>
+              <span className="text-zinc-200">{objW}px</span>
+              <span className="text-zinc-500">H:</span>
+              <span className="text-zinc-200">{objH}px</span>
+            </div>
+
+            {/* Opacity */}
+            <div className="flex items-center space-x-1 pl-1 text-[11px] text-zinc-400 font-mono">
+              <span className="text-zinc-500">Opacidad:</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={currentOpacity}
+                onChange={(e) => handleOpacityChange(Number(e.target.value))}
+                className="w-11 bg-[#1a1a1a] border border-[#3e3e3e] text-white px-1 py-0.5 rounded text-[11px] text-center focus:outline-none"
+              />
+              <span>%</span>
+            </div>
+
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* CASE 3: IMAGE SELECTED */}
+        {/* ============================================================== */}
         {isImage && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2.5">
             <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center space-x-1">
               <ImageIcon className="w-3.5 h-3.5 text-[#388bff]" />
               <span>Imagen:</span>
             </span>
 
-            {/* Change image from PC */}
+            {/* Replace image */}
             <input 
               ref={replaceImageInputRef} 
               type="file" 
@@ -353,7 +616,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             />
             <button
               onClick={() => replaceImageInputRef.current?.click()}
-              className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1e1e1e] hover:bg-[#333333] border border-[#3e3e3e] text-xs font-medium text-white transition"
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1a1a1a] hover:bg-[#333333] border border-[#3e3e3e] text-xs font-medium text-white transition"
               title="Seleccionar otra imagen desde tu PC para reemplazar este objeto"
             >
               <Upload className="w-3.5 h-3.5 text-[#388bff]" />
@@ -367,7 +630,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded border border-[#3e3e3e] text-xs font-medium transition ${
                 isProcessingBg 
                   ? 'bg-[#333333] text-zinc-400 cursor-not-allowed' 
-                  : 'bg-[#1e1e1e] hover:bg-[#333333] text-white'
+                  : 'bg-[#1a1a1a] hover:bg-[#333333] text-white'
               }`}
               title="Eliminar fondo blanco o sólido automáticamente"
             >
@@ -375,36 +638,25 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
               <span>{isProcessingBg ? 'Recortando...' : 'Eliminar Fondo'}</span>
             </button>
 
-            <span className="text-[11px] text-zinc-500 font-mono pl-1">
+            {/* Alignment for image */}
+            <div className="flex items-center space-x-0.5 pl-2 border-l border-[#3a3a3a]">
+              <button onClick={() => handleAlign('center-h')} className="p-1 rounded hover:bg-[#333333] text-zinc-300" title="Centrar horizontalmente">
+                <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => handleAlign('center-v')} className="p-1 rounded hover:bg-[#333333] text-zinc-300" title="Centrar verticalmente">
+                <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <span className="text-[11px] text-zinc-400 font-mono pl-1">
               Opacidad: {currentOpacity}%
             </span>
           </div>
         )}
 
-        {/* CASE 3: SHAPE SELECTED */}
-        {isShape && (
-          <div className="flex items-center space-x-2">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center space-x-1">
-              <Square className="w-3.5 h-3.5 text-[#388bff]" />
-              <span>Forma:</span>
-            </span>
-
-            {/* Color chips */}
-            <div className="flex items-center space-x-1">
-              {paletteColors.map((c, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleColorChange(c)}
-                  className={`w-4 h-4 rounded border ${currentFill.toLowerCase() === c.toLowerCase() ? 'border-[#388bff] ring-1 ring-[#388bff]' : 'border-[#444444]'}`}
-                  style={{ backgroundColor: c }}
-                  title={`Relleno: ${c}`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* CASE 4: NOTHING SELECTED (CANVAS LEVEL CONTROLS) */}
+        {/* ============================================================== */}
+        {/* CASE 4: NOTHING SELECTED (ARTBOARD CANVAS SETTINGS) */}
+        {/* ============================================================== */}
         {!selectedObject && (
           <div className="flex items-center space-x-3 text-xs">
             <div className="flex items-center space-x-1.5">
@@ -414,7 +666,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
                   CANVAS_FORMATS.find(f => f.width === docConfig.width && f.height === docConfig.height)?.id || 'custom'
                 }
                 onChange={(e) => handleFormatSelect(e.target.value)}
-                className="bg-[#1e1e1e] border border-[#3e3e3e] text-white px-2 py-1 rounded text-xs focus:outline-none"
+                className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-2.5 py-1 rounded text-xs focus:outline-none"
               >
                 {CANVAS_FORMATS.map(f => (
                   <option key={f.id} value={f.id}>
@@ -427,7 +679,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             <div className="h-3.5 w-px bg-[#3e3e3e]" />
 
             <div className="flex items-center space-x-2 text-[11px] text-zinc-400 font-mono">
-              <span>{docConfig.width} × {docConfig.height} px</span>
+              <span className="text-zinc-200 font-semibold">{docConfig.width} × {docConfig.height} px</span>
               <span className="text-zinc-600">•</span>
               <span>{docConfig.colorMode}</span>
               <span className="text-zinc-600">•</span>
@@ -461,7 +713,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             <button
               onClick={handleDuplicate}
               className="p-1 rounded hover:bg-[#333333] text-zinc-400 hover:text-white transition"
-              title="Duplicar capa seleccionada"
+              title="Duplicar capa seleccionada (Ctrl+D)"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>

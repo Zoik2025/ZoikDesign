@@ -339,113 +339,9 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
   };
 
   return (
-    <main className="flex-1 relative flex flex-col items-center justify-center p-6 overflow-auto bg-[#101012] select-none">
+    <main className="flex-1 relative flex flex-col items-center justify-center p-6 overflow-auto bg-[#1a1a1a] select-none">
       
-      {/* FLOATING WORKSTATION CONTEXT TOOLBAR */}
-      <div className="absolute top-4 bg-[#18181b]/95 backdrop-blur-md border border-[#27272a] rounded-xl px-3 py-1.5 flex items-center space-x-2 shadow-2xl z-20 text-xs">
-        
-        {/* ADD TEXT */}
-        <button
-          onClick={handleAddText}
-          className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition"
-          title="Añadir Texto Editable al Lienzo (T)"
-        >
-          <Type className="w-3.5 h-3.5 text-purple-400" />
-          <span>+ Texto</span>
-        </button>
-
-        {/* UPLOAD / PASTE IMAGE */}
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleUploadImageFile}
-          className="hidden"
-        />
-        <button
-          onClick={() => imageInputRef.current?.click()}
-          className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition"
-          title="Subir o pegar imagen de tu PC (Ctrl+V)"
-        >
-          <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
-          <span>+ Imagen</span>
-        </button>
-
-        {/* SHAPES */}
-        <button
-          onClick={handleAddRect}
-          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition"
-          title="Añadir Rectángulo"
-        >
-          <Square className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={handleAddCircle}
-          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition"
-          title="Añadir Círculo"
-        >
-          <Circle className="w-3.5 h-3.5" />
-        </button>
-
-        <div className="w-px h-4 bg-zinc-700 mx-1" />
-
-        {/* ACTIONS ON SELECTED OBJECT */}
-        {selectedObject && (
-          <>
-            {selectedObject.type === 'image' && (
-              <button
-                onClick={handleRemoveBackground}
-                disabled={isRemovingBg}
-                className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition shadow-md shadow-purple-600/30"
-                title="Quitar fondo de la imagen automáticamente (Photoshop Cutout)"
-              >
-                <Wand2 className="w-3.5 h-3.5" />
-                <span>{isRemovingBg ? 'Recortando...' : '🪄 Quitar Fondo'}</span>
-              </button>
-            )}
-
-            <button
-              onClick={handleBringForward}
-              className="p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800"
-              title="Traer capa adelante"
-            >
-              <MoveUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleSendBackward}
-              className="p-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800"
-              title="Enviar capa atrás"
-            >
-              <MoveDown className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleDeleteSelected}
-              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/40"
-              title="Eliminar elemento (Delete)"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="w-px h-4 bg-zinc-700 mx-1" />
-          </>
-        )}
-
-        {/* ZOOM */}
-        <div className="flex items-center space-x-1 text-zinc-400">
-          <button onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))} className="p-1 hover:text-white">
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <span className="font-mono text-white text-[11px] font-bold w-10 text-center">
-            {Math.round(zoomLevel * 100)}%
-          </span>
-          <button onClick={() => setZoomLevel(prev => Math.min(1.8, prev + 0.1))} className="p-1 hover:text-white">
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-      </div>
-
-      {/* THE FABRIC.JS ARTBOARD CONTAINER */}
+      {/* THE FABRIC.JS ARTBOARD CONTAINER (CLEAN, NO FLOATING CLUTTER) */}
       <div 
         className="relative shadow-2xl rounded-sm overflow-hidden border border-[#3e3e3e] shrink-0 transition-all duration-200"
         style={{
@@ -456,17 +352,52 @@ export const InteractiveDesignCanvas: React.FC<InteractiveDesignCanvasProps> = (
         <canvas ref={canvasElRef} />
       </div>
 
-      {/* BOTTOM STATUS BAR (ILLUSTRATOR STYLE) */}
-      <div className="mt-2.5 text-[11px] text-zinc-400 font-medium flex items-center space-x-2 bg-[#262626] px-3.5 py-1 rounded border border-[#383838] shadow-sm">
-        <span className="text-white font-semibold">{docConfig.title}</span>
-        <span>•</span>
-        <span className="font-mono">{docConfig.displayValueWidth} × {docConfig.displayValueHeight} {docConfig.unit}</span>
-        <span>•</span>
-        <span className="text-zinc-200 font-medium">{docConfig.colorMode}</span>
-        <span>•</span>
-        <span className="font-mono">{docConfig.dpi} DPI</span>
-        <span>•</span>
-        <span className="text-zinc-500">Doble clic en texto para editar en vivo</span>
+      {/* BOTTOM STATUS BAR (ADOBE ILLUSTRATOR SIGNATURE) */}
+      <div className="mt-3 text-[11px] text-zinc-400 font-medium flex items-center justify-between bg-[#242424] px-4 py-1.5 rounded border border-[#333333] shadow-md w-auto max-w-full space-x-6">
+        
+        {/* Left: Zoom Controller */}
+        <div className="flex items-center space-x-1.5 border-r border-[#3a3a3a] pr-4">
+          <button 
+            onClick={() => setZoomLevel(prev => Math.max(0.2, prev - 0.1))} 
+            className="p-1 rounded hover:bg-[#333333] text-zinc-400 hover:text-white transition"
+            title="Reducir Zoom (Ctrl -)"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          
+          <button
+            onClick={() => setZoomLevel(1)}
+            className="font-mono text-zinc-200 hover:text-white px-2 py-0.5 rounded hover:bg-[#333333] text-[11px] font-bold min-w-[50px] text-center transition"
+            title="Clic para 100% (Tamaño Real)"
+          >
+            {Math.round(zoomLevel * 100)}%
+          </button>
+
+          <button 
+            onClick={() => setZoomLevel(prev => Math.min(2.5, prev + 0.1))} 
+            className="p-1 rounded hover:bg-[#333333] text-zinc-400 hover:text-white transition"
+            title="Aumentar Zoom (Ctrl +)"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Center: Document Dimensions & Color Profile */}
+        <div className="flex items-center space-x-2 text-zinc-300">
+          <span className="text-white font-semibold">{docConfig.title}</span>
+          <span className="text-zinc-600">•</span>
+          <span className="font-mono text-zinc-300">{docConfig.width} × {docConfig.height} px</span>
+          <span className="text-zinc-600">•</span>
+          <span className="text-zinc-300 font-medium">{docConfig.colorMode}</span>
+          <span className="text-zinc-600">•</span>
+          <span className="font-mono text-zinc-400">{docConfig.dpi} DPI</span>
+        </div>
+
+        {/* Right: Quick Hint */}
+        <div className="text-[10px] text-zinc-500 hidden md:block pl-2 border-l border-[#3a3a3a]">
+          {selectedObject ? 'Objeto seleccionado • Usa las herramientas de arriba' : 'Doble clic en texto para editar'}
+        </div>
+
       </div>
 
     </main>
