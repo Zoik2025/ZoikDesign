@@ -19,14 +19,11 @@ process.on('unhandledRejection', (reason) => {
   log(`UNHANDLED REJECTION: ${reason}`);
 });
 
-// Bloqueo de instancia única
+app.setAppUserModelId('com.zoikdesign.app');
+
+// Registro de instancia
 const gotTheLock = app.requestSingleInstanceLock();
 log(`Got single instance lock: ${gotTheLock}`);
-if (!gotTheLock) {
-  log('Another instance is running, quitting.');
-  app.quit();
-  process.exit(0);
-}
 
 let mainWindow = null;
 
@@ -86,7 +83,10 @@ app.on('second-instance', () => {
   log('second-instance event triggered');
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
     mainWindow.focus();
+  } else {
+    createWindow();
   }
 });
 
