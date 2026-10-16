@@ -379,6 +379,18 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                         <option key={f.name} value={f.name}>{f.name}</option>
                       ))}
                     </optgroup>
+
+                    <optgroup label="✨ Cyber & Tech">
+                      {FONT_CATALOG.filter(f => f.category === 'Cyber & Tech').map(f => (
+                        <option key={f.name} value={f.name}>{f.name}</option>
+                      ))}
+                    </optgroup>
+
+                    <optgroup label="✨ Script & Creativas">
+                      {FONT_CATALOG.filter(f => f.category === 'Script & Creative').map(f => (
+                        <option key={f.name} value={f.name}>{f.name}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fabric } from 'fabric';
 import saveAs from 'file-saver';
-import type { BrandKit, DocumentConfig, EditorTool, CompositionStyle, PieceCopyInput } from './types';
+import type { BrandKit, DocumentConfig, EditorTool, CompositionStyle, PieceCopyInput, BrandReferencePiece } from './types';
 import { getSavedBrands, saveBrandToStorage, createEmptyBrand } from './data/defaultBrands';
 import { getLocalPcFonts } from './data/systemFonts';
 import type { SystemFontInfo } from './data/systemFonts';
@@ -19,6 +19,7 @@ import { NewDocumentModal } from './components/NewDocumentModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LocalAiImageModal } from './components/LocalAiImageModal';
 import { generateLocalDesignPiece } from './services/localDesignEngine';
+import { designPieceWithOpenAiSvg } from './services/openAiSvgDesignEngine';
 
 const SETTINGS_KEY = 'zoik_api_settings_v1';
 
@@ -43,12 +44,12 @@ export const App: React.FC = () => {
     orientation: 'portrait',
   });
 
-  // Copy Real del Usuario (La IA diseña sobre estos textos, NO los inventa)
+  // Copy Real del Usuario (Inicia 100% vacío, la IA diseña sobre estos textos exactos)
   const [copyInput, setCopyInput] = useState<PieceCopyInput>({
-    headline: 'NUEVA COLECCIÓN EXCLUSIVA',
-    subtitle: 'Calidad superior, diseño de vanguardia y garantía total en cada detalle.',
-    badgeText: '30% OFF',
-    ctaText: 'COMPRAR AHORA',
+    headline: '',
+    subtitle: '',
+    badgeText: '',
+    ctaText: '',
   });
 
   // Creative & AI Layout State
@@ -324,6 +325,88 @@ export const App: React.FC = () => {
     await handleGenerate(nextSeed);
   };
 
+  // --- DISEÑO VECTORIAL SVG CON OPENAI GPT-4o VISION ---
+  const [isOpenAiSvgGenerating, setIsOpenAiSvgGenerating] = useState(false);
+  const [openAiSvgStatus, setOpenAiSvgStatus] = useState('');
+
+  const handleGenerateOpenAiSvg = async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    const apiKey = (apiSettings.openaiApiKey || '').trim();
+    if (!apiKey) {
+      alert('Por favor configura tu clave API de OpenAI en Configuración (icono de engranaje en la esquina superior derecha).');
+      setIsSettingsModalOpen(true);
+      return;
+    }
+
+    if (!copyInput.headline?.trim()) {
+      alert('Por favor ingresa al menos el Titular Principal (H1) en el menú lateral para que la IA diseñe la pieza.');
+      return;
+    }
+
+    setIsOpenAiSvgGenerating(true);
+    setOpenAiSvgStatus('Analizando referencias de marca...');
+
+    try {
+      const result = await designPieceWithOpenAiSvg({
+        canvas,
+        docConfig,
+        copyInput,
+        brand: currentBrand,
+        apiKey,
+        compositionStyle,
+        variationSeed,
+        onProgress: (status) => setOpenAiSvgStatus(status),
+      });
+
+      if (result.success) {
+        setSelectedFabricObject(null);
+      }
+    } catch (err: any) {
+      console.error('Error al diseñar con OpenAI:', err);
+      alert(`Error al generar diseño con OpenAI: ${err.message || err}`);
+    } finally {
+      setIsOpenAiSvgGenerating(false);
+      setOpenAiSvgStatus('');
+    }
+  };
+
+  // Subir imagen de referencia directamente desde la barra lateral
+  const handleUploadReferencePiece = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+
+      const newRef: BrandReferencePiece = {
+        id: 'ref_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        imageUrl: dataUrl,
+        layoutStructure: compositionStyle || 'split-left-right',
+      };
+
+      const updatedBrand: BrandKit = {
+        ...currentBrand,
+        referencePieces: [...(currentBrand.referencePieces || []), newRef],
+      };
+      handleSaveBrand(updatedBrand);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Eliminar imagen de referencia desde la barra lateral
+  const handleDeleteReferencePiece = (id: string) => {
+    const updatedBrand: BrandKit = {
+      ...currentBrand,
+      referencePieces: (currentBrand.referencePieces || []).filter(r => r.id !== id),
+    };
+    handleSaveBrand(updatedBrand);
+    if (selectedReferenceId === id) {
+      setSelectedReferenceId(undefined);
+    }
+  };
+
   // Establecer imagen generada por IA como protagonista o fondo de diseño
   const handleSetHeroSubject = (imageUrl: string, title?: string, isCutout = true) => {
     const canvas = fabricCanvasRef.current;
@@ -517,6 +600,11 @@ export const App: React.FC = () => {
           variationSeed={variationSeed}
           isGenerating={isGenerating}
           onOpenAiStudio={() => setIsAiStudioOpen(true)}
+          onGenerateOpenAiSvg={handleGenerateOpenAiSvg}
+          isOpenAiGenerating={isOpenAiSvgGenerating}
+          openAiStatusText={openAiSvgStatus}
+          onUploadReferencePiece={handleUploadReferencePiece}
+          onDeleteReferencePiece={handleDeleteReferencePiece}
         />
 
         {/* CENTER: TRUE INTERACTIVE FABRIC.JS CANVAS */}

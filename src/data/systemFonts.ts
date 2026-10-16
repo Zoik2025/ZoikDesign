@@ -4,25 +4,67 @@ export interface SystemFontInfo {
   category: string;
 }
 
-// Catálogo de fuentes estándar preinstaladas en Windows
+// Catálogo completo de fuentes estándar y tipografías preinstaladas en Windows
 const WINDOWS_DEFAULT_FONTS = [
-  'Segoe UI',
-  'Bahnschrift',
-  'Century Gothic',
-  'Franklin Gothic Medium',
   'Arial',
-  'Calibri',
-  'Trebuchet MS',
-  'Tahoma',
-  'Verdana',
-  'Georgia',
-  'Palatino Linotype',
-  'Impact',
   'Arial Black',
-  'Candara',
-  'Corbel',
-  'Consolas',
+  'Arial Narrow',
+  'Bahnschrift',
+  'Book Antiqua',
+  'Bookman Old Style',
+  'Bradley Hand ITC',
+  'Calibri',
   'Cambria',
+  'Candara',
+  'Century',
+  'Century Gothic',
+  'Comic Sans MS',
+  'Consolas',
+  'Constantia',
+  'Corbel',
+  'Courier New',
+  'Dubai',
+  'Ebrima',
+  'Franklin Gothic Medium',
+  'Freestyle Script',
+  'French Script MT',
+  'Gabriola',
+  'Gadugi',
+  'Garamond',
+  'Georgia',
+  'Haettenschweiler',
+  'Impact',
+  'Ink Free',
+  'Javanese Text',
+  'Juice ITC',
+  'Kristen ITC',
+  'Leelawadee UI',
+  'Lucida Console',
+  'Lucida Handwriting',
+  'Lucida Sans Unicode',
+  'Malgun Gothic',
+  'Microsoft Sans Serif',
+  'Microsoft YaHei',
+  'Mistral',
+  'Monotype Corsiva',
+  'MV Boli',
+  'Myanmar Text',
+  'Nirmala UI',
+  'Palatino Linotype',
+  'Papyrus',
+  'Pristina',
+  'Segoe Print',
+  'Segoe Script',
+  'Segoe UI',
+  'Segoe UI Variable',
+  'Sitka Text',
+  'Sylfaen',
+  'Tahoma',
+  'Tempus Sans ITC',
+  'Times New Roman',
+  'Trebuchet MS',
+  'Verdana',
+  'Yu Gothic',
 ];
 
 /**
@@ -44,7 +86,7 @@ export async function getLocalPcFonts(): Promise<SystemFontInfo[]> {
           result.push({
             name: family,
             source: 'local-pc',
-            category: 'Fuente Local de Windows',
+            category: 'Fuente Local de tu PC (Windows)',
           });
         }
       }
@@ -60,7 +102,7 @@ export async function getLocalPcFonts(): Promise<SystemFontInfo[]> {
       result.push({
         name: winFont,
         source: 'local-pc',
-        category: 'Sistema Windows',
+        category: 'Sistema Windows (PC)',
       });
     }
   }

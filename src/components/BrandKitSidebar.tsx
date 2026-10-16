@@ -1,11 +1,10 @@
-import React from 'react';
-import type { BrandKit, CompositionStyle, DocumentConfig, PieceCopyInput } from '../types';
+import React, { useRef } from 'react';
+import type { BrandKit, BrandReferencePiece, CompositionStyle, DocumentConfig, PieceCopyInput } from '../types';
 import { CANVAS_FORMATS } from '../data/canvasFormats';
 import { 
   Sparkles, Layers, FolderOpen, 
-  Settings2, Plus, Type, CheckCircle2,
-  Sliders, Info, Image as ImageIcon, Upload,
-  Shuffle
+  Plus, Type, Image as ImageIcon, Upload,
+  Shuffle, Trash2, Cpu, Check, HelpCircle
 } from 'lucide-react';
 
 interface BrandKitSidebarProps {
@@ -26,6 +25,12 @@ interface BrandKitSidebarProps {
   variationSeed?: number;
   isGenerating: boolean;
   onOpenAiStudio?: () => void;
+  // OpenAI SVG Generator
+  onGenerateOpenAiSvg?: () => void;
+  isOpenAiGenerating?: boolean;
+  openAiStatusText?: string;
+  onUploadReferencePiece?: (file: File) => void;
+  onDeleteReferencePiece?: (id: string) => void;
 }
 
 export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
@@ -46,7 +51,13 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
   variationSeed = 0,
   isGenerating,
   onOpenAiStudio,
+  onGenerateOpenAiSvg,
+  isOpenAiGenerating = false,
+  openAiStatusText = '',
+  onUploadReferencePiece,
+  onDeleteReferencePiece,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const referencePieces = brand.referencePieces || [];
 
   const handleSelectFormat = (fmtId: string) => {
@@ -63,58 +74,155 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0 && onUploadReferencePiece) {
+      for (let i = 0; i < files.length; i++) {
+        onUploadReferencePiece(files[i]);
+      }
+    }
+    e.target.value = '';
+  };
+
   return (
-    <aside className="w-80 border-r border-[#333333] bg-[#1e1e1e] flex flex-col shrink-0 overflow-y-auto select-none custom-scroll text-xs text-[#d4d4d8]">
+    <aside className="w-80 border-r border-[#2d2d30] bg-[#141416] flex flex-col shrink-0 overflow-y-auto select-none custom-scroll text-xs text-[#d4d4d8]">
       
-      {/* 1. SECCIÓN: MARCA ACTIVA (MINIMALISTA, SIN BARRAS DE COLOR MOLESTAS) */}
-      <div className="p-3 border-b border-[#333333]">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Kit de Marca Activo
-          </span>
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={onOpenBrandEcosystem}
-              className="text-[11px] text-zinc-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#2d2d2d] transition flex items-center space-x-1"
-              title="Gestionar piezas de referencia"
-            >
-              <FolderOpen className="w-3 h-3 text-[#388bff]" />
-              <span>Referencias ({referencePieces.length})</span>
-            </button>
-            <button
-              onClick={onEditBrand}
-              className="text-[11px] text-zinc-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#2d2d2d] transition"
-            >
-              Editar
-            </button>
+      {/* 1. SECCIÓN: GUÍA VISUAL DE MARCA (REFERENCIAS REALES) */}
+      <div className="p-3 border-b border-[#252528] bg-[#18181b]/60">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-white">
+              Referencias de tu Marca
+            </h2>
           </div>
+          <button
+            onClick={onEditBrand}
+            className="text-[10px] text-zinc-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#27272a] transition"
+            title="Manual de marca opcional"
+          >
+            Manual (Opcional)
+          </button>
         </div>
 
-        {/* Brand preview card compacta */}
-        <div className="bg-[#262626] border border-[#383838] rounded p-2 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5 overflow-hidden">
-            <div 
-              className="w-7 h-7 rounded flex items-center justify-center font-black text-white text-xs border border-white/20 shrink-0"
-              style={{ backgroundColor: brand.colors.primary }}
-            >
-              {brand.logo.symbolText || 'Z'}
-            </div>
-            <div className="overflow-hidden">
-              <h3 className="font-bold text-white text-xs truncate leading-tight">{brand.name}</h3>
-              <p className="text-[10px] text-zinc-400 truncate">{brand.industry}</p>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono text-zinc-500 shrink-0 pl-2">
-            {brand.typography.headlineFont}
-          </span>
+        <p className="text-[11px] text-zinc-400 mb-2.5 leading-relaxed">
+          Sube ejemplos de cómo se ve tu marca normalmente (posts, flyers, anuncios). La IA los usará de guía para igualar su estilo, colores y jerarquías.
+        </p>
+
+        {/* Botón rápido de subir referencias */}
+        <input 
+          ref={fileInputRef}
+          type="file" 
+          accept="image/*" 
+          multiple
+          onChange={handleFileChange} 
+          className="hidden" 
+        />
+
+        <div className="flex items-center space-x-1.5 mb-2.5">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 py-1.5 px-2.5 rounded bg-[#202024] hover:bg-[#28282e] border border-[#333338] hover:border-[#388bff] text-white text-[11px] font-medium flex items-center justify-center space-x-1.5 transition shadow-sm"
+          >
+            <Upload className="w-3.5 h-3.5 text-[#388bff]" />
+            <span>+ Subir pieza de ejemplo</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={onOpenBrandEcosystem}
+            className="p-1.5 rounded bg-[#202024] hover:bg-[#28282e] border border-[#333338] text-zinc-400 hover:text-white transition"
+            title="Ver galería completa de referencias"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+          </button>
         </div>
+
+        {/* Galería de piezas de referencia */}
+        {referencePieces.length > 0 ? (
+          <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scroll pr-1">
+            {/* Opción Automática */}
+            <button
+              type="button"
+              onClick={() => onSelectReferenceId(undefined)}
+              className={`w-full p-2 rounded-lg border text-left flex items-center space-x-2 transition ${
+                !selectedReferenceId
+                  ? 'border-[#388bff] bg-[#388bff]/10 text-white'
+                  : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-400 hover:text-zinc-200 hover:bg-[#222226]'
+              }`}
+            >
+              <div className="w-6 h-6 rounded bg-[#27272a] flex items-center justify-center font-bold text-[10px] text-[#388bff] shrink-0">
+                AI
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <span className="text-[11px] font-semibold block truncate">Emular todas las referencias</span>
+                <span className="text-[9px] text-zinc-500 block truncate">Sintetiza la identidad global de la marca</span>
+              </div>
+              {!selectedReferenceId && <Check className="w-3.5 h-3.5 text-[#388bff] shrink-0" />}
+            </button>
+
+            {/* Lista de referencias */}
+            {referencePieces.map((ref) => (
+              <div
+                key={ref.id}
+                className={`group flex items-center space-x-2 p-1.5 rounded-lg border transition ${
+                  selectedReferenceId === ref.id
+                    ? 'border-[#388bff] bg-[#388bff]/10 text-white'
+                    : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-400 hover:text-zinc-200 hover:bg-[#222226]'
+                }`}
+              >
+                <img 
+                  src={ref.imageUrl} 
+                  alt={ref.title} 
+                  onClick={() => {
+                    onSelectReferenceId(ref.id);
+                    onChangeCompositionStyle(ref.layoutStructure);
+                  }}
+                  className="w-8 h-8 rounded object-cover bg-black shrink-0 border border-[#3e3e44] cursor-pointer"
+                />
+                <div 
+                  className="flex-1 overflow-hidden cursor-pointer"
+                  onClick={() => {
+                    onSelectReferenceId(ref.id);
+                    onChangeCompositionStyle(ref.layoutStructure);
+                  }}
+                >
+                  <span className="text-[11px] font-medium block truncate text-zinc-200">{ref.title}</span>
+                  <span className="text-[9px] text-zinc-500 block truncate font-mono">
+                    {ref.layoutStructure}
+                  </span>
+                </div>
+                {onDeleteReferencePiece && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteReferencePiece(ref.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-400 transition"
+                    title="Eliminar referencia"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-2.5 text-center border border-dashed border-[#333338] rounded-lg bg-[#18181b]/40">
+            <p className="text-[10px] text-zinc-500">
+              No has subido ejemplos aún. Sube 1 o 2 imágenes para que la IA sepa el estilo de tu marca.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* 2. SECCIÓN: FORMATO DE LA PIEZA */}
-      <div className="p-3 border-b border-[#333333]">
-        <div className="flex items-center justify-between mb-2">
+      {/* 2. SECCIÓN: FORMATO DEL LIENZO */}
+      <div className="p-3 border-b border-[#252528]">
+        <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Formato de la Pieza
+            Formato del Lienzo
           </span>
           <button
             onClick={onOpenNewDocumentModal}
@@ -127,10 +235,10 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
         <div className="grid grid-cols-2 gap-1.5">
           <button
             onClick={() => handleSelectFormat('instagram-portrait')}
-            className={`p-2 rounded border text-left transition ${
+            className={`p-2 rounded-lg border text-left transition ${
               docConfig.width === 1080 && docConfig.height === 1350
-                ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white font-semibold'
-                : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
+                ? 'border-[#388bff] bg-[#388bff]/15 text-white font-semibold'
+                : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-300 hover:bg-[#222226]'
             }`}
           >
             <div className="flex items-center justify-between mb-0.5">
@@ -142,10 +250,10 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
 
           <button
             onClick={() => handleSelectFormat('instagram-square')}
-            className={`p-2 rounded border text-left transition ${
+            className={`p-2 rounded-lg border text-left transition ${
               docConfig.width === 1080 && docConfig.height === 1080
-                ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white font-semibold'
-                : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
+                ? 'border-[#388bff] bg-[#388bff]/15 text-white font-semibold'
+                : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-300 hover:bg-[#222226]'
             }`}
           >
             <div className="flex items-center justify-between mb-0.5">
@@ -157,10 +265,10 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
 
           <button
             onClick={() => handleSelectFormat('instagram-story')}
-            className={`p-2 rounded border text-left transition ${
+            className={`p-2 rounded-lg border text-left transition ${
               docConfig.width === 1080 && docConfig.height === 1920
-                ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white font-semibold'
-                : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
+                ? 'border-[#388bff] bg-[#388bff]/15 text-white font-semibold'
+                : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-300 hover:bg-[#222226]'
             }`}
           >
             <div className="flex items-center justify-between mb-0.5">
@@ -172,10 +280,10 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
 
           <button
             onClick={() => handleSelectFormat('youtube-thumb')}
-            className={`p-2 rounded border text-left transition ${
+            className={`p-2 rounded-lg border text-left transition ${
               docConfig.width === 1920 && docConfig.height === 1080
-                ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white font-semibold'
-                : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
+                ? 'border-[#388bff] bg-[#388bff]/15 text-white font-semibold'
+                : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-300 hover:bg-[#222226]'
             }`}
           >
             <div className="flex items-center justify-between mb-0.5">
@@ -187,45 +295,41 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
         </div>
       </div>
 
-      {/* 3. SECCIÓN: COPY REAL DE LA PIEZA (LA IA NO INVENTA TEXTO, SE LO DA EL USUARIO) */}
-      <div className="p-3 border-b border-[#333333]">
+      {/* 3. SECCIÓN: COPYWRITING DE LA PIEZA (VACÍO POR DEFECTO, 100% PERSONALIZADO) */}
+      <div className="p-3 border-b border-[#252528]">
         <div className="flex items-center justify-between mb-1.5">
           <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 flex items-center space-x-1">
             <Type className="w-3.5 h-3.5 text-[#388bff]" />
             <span>Copywriting de la Pieza</span>
           </label>
-          <span className="text-[10px] text-zinc-500">100% tu copy</span>
+          <span className="text-[9px] text-zinc-500">Sin plantillas prediseñadas</span>
         </div>
-        
-        <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed">
-          Ingresa los textos exactos. La IA diseñará la jerarquía visual y composición vectorial en base a este copy.
-        </p>
 
         {/* Titular Principal */}
         <div className="mb-2">
-          <label className="block text-[10px] font-semibold text-zinc-300 mb-1">
+          <label className="block text-[10px] font-semibold text-zinc-400 mb-1">
             Titular Principal (H1) *
           </label>
           <input
             type="text"
-            value={copyInput.headline}
+            value={copyInput.headline || ''}
             onChange={(e) => onChangeCopyInput({ ...copyInput, headline: e.target.value })}
-            placeholder="Ej: NUEVA COLECCIÓN DEPORTIVA"
-            className="w-full bg-[#262626] border border-[#383838] focus:border-[#0d66d0] rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+            placeholder="Escribe el titular de tu pieza..."
+            className="w-full bg-[#1c1c20] border border-[#2e2e34] focus:border-[#388bff] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition"
           />
         </div>
 
         {/* Subtítulo / Bajada */}
         <div className="mb-2">
-          <label className="block text-[10px] font-semibold text-zinc-300 mb-1">
-            Subtítulo / Bajada de Texto
+          <label className="block text-[10px] font-semibold text-zinc-400 mb-1">
+            Subtítulo / Bajada (Opcional)
           </label>
           <textarea
-            value={copyInput.subtitle}
+            value={copyInput.subtitle || ''}
             onChange={(e) => onChangeCopyInput({ ...copyInput, subtitle: e.target.value })}
             rows={2}
-            placeholder="Ej: Máximo rendimiento y transpirabilidad con materiales sostenibles."
-            className="w-full bg-[#262626] border border-[#383838] focus:border-[#0d66d0] rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none"
+            placeholder="Subtítulo o texto explicativo..."
+            className="w-full bg-[#1c1c20] border border-[#2e2e34] focus:border-[#388bff] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none transition"
           />
         </div>
 
@@ -239,27 +343,27 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
               type="text"
               value={copyInput.badgeText || ''}
               onChange={(e) => onChangeCopyInput({ ...copyInput, badgeText: e.target.value })}
-              placeholder="Ej: 30% OFF"
-              className="w-full bg-[#262626] border border-[#383838] focus:border-[#0d66d0] rounded px-2 py-1 text-xs text-white placeholder-zinc-500 focus:outline-none"
+              placeholder="Ej: 50% OFF"
+              className="w-full bg-[#1c1c20] border border-[#2e2e34] focus:border-[#388bff] rounded-lg px-2 py-1 text-xs text-white placeholder-zinc-500 focus:outline-none transition"
             />
           </div>
 
           <div>
             <label className="block text-[10px] font-semibold text-zinc-400 mb-1">
-              Botón / CTA
+              Botón / CTA (Opcional)
             </label>
             <input
               type="text"
               value={copyInput.ctaText || ''}
               onChange={(e) => onChangeCopyInput({ ...copyInput, ctaText: e.target.value })}
               placeholder="Ej: COMPRAR AHORA"
-              className="w-full bg-[#262626] border border-[#383838] focus:border-[#0d66d0] rounded px-2 py-1 text-xs text-white placeholder-zinc-500 focus:outline-none"
+              className="w-full bg-[#1c1c20] border border-[#2e2e34] focus:border-[#388bff] rounded-lg px-2 py-1 text-xs text-white placeholder-zinc-500 focus:outline-none transition"
             />
           </div>
         </div>
 
         {/* 3.1 PROTAGONISTA VISUAL / FOTO DEL PRODUCTO */}
-        <div className="mt-2.5 pt-2.5 border-t border-[#333333]">
+        <div className="mt-2.5 pt-2.5 border-t border-[#252528]">
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-[10px] font-semibold text-zinc-300 flex items-center space-x-1">
               <ImageIcon className="w-3 h-3 text-[#388bff]" />
@@ -267,6 +371,7 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
             </label>
             {copyInput.subjectImageUrl && (
               <button
+                type="button"
                 onClick={() => onChangeCopyInput({ ...copyInput, subjectImageUrl: undefined })}
                 className="text-[10px] text-red-400 hover:underline"
               >
@@ -277,22 +382,22 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
 
           {copyInput.subjectImageUrl ? (
             <div className="space-y-1.5">
-              <div className="flex items-center space-x-2 bg-[#222222] border border-[#3e3e3e] p-2 rounded">
+              <div className="flex items-center space-x-2 bg-[#1c1c20] border border-[#2e2e34] p-2 rounded-lg">
                 <img 
                   src={copyInput.subjectImageUrl} 
                   alt="Sujeto" 
-                  className="w-10 h-10 object-contain rounded bg-black/50 border border-[#444444]" 
+                  className="w-10 h-10 object-contain rounded bg-black/50 border border-[#3e3e44]" 
                 />
                 <div className="flex-1 overflow-hidden">
                   <span className="text-[11px] text-white block truncate font-medium">Sujeto Activo</span>
-                  <span className="text-[9px] text-emerald-400 block truncate font-medium">● Integrado con luces y sombras</span>
+                  <span className="text-[9px] text-emerald-400 block truncate font-medium">● Integrado en el diseño</span>
                 </div>
               </div>
               {onOpenAiStudio && (
                 <button
                   type="button"
                   onClick={onOpenAiStudio}
-                  className="w-full py-1.5 px-2 rounded bg-[#2b2b30] hover:bg-[#34343a] text-zinc-300 hover:text-white border border-[#3e3e44] text-[10px] font-medium flex items-center justify-center space-x-1.5 transition"
+                  className="w-full py-1 px-2 rounded-lg bg-[#24242a] hover:bg-[#2c2c34] text-zinc-300 hover:text-white border border-[#36363e] text-[10px] font-medium flex items-center justify-center space-x-1.5 transition"
                 >
                   <Sparkles className="w-3 h-3 text-amber-300" />
                   <span>Generar otro sujeto con IA</span>
@@ -300,252 +405,158 @@ export const BrandKitSidebar: React.FC<BrandKitSidebarProps> = ({
               )}
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-1.5">
-                {onOpenAiStudio && (
-                  <button
-                    type="button"
-                    onClick={onOpenAiStudio}
-                    className="flex items-center justify-center p-2 rounded bg-gradient-to-r from-[#0d66d0] via-indigo-600 to-[#7c3aed] hover:from-[#1070e5] hover:to-[#8b5cf6] text-white font-bold text-xs transition shadow-sm group"
-                    title="Sintetizar futbolista, atleta o producto con IA y recorte automático"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-300 group-hover:scale-110 transition" />
-                    <span>Generar IA</span>
-                  </button>
-                )}
-                <label className="flex items-center justify-center p-2 border border-dashed border-[#3e3e3e] hover:border-[#0d66d0] rounded bg-[#242424] cursor-pointer transition text-zinc-300 hover:text-white">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          if (ev.target?.result) {
-                            onChangeCopyInput({ ...copyInput, subjectImageUrl: ev.target.result as string });
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                      e.target.value = '';
-                    }}
-                    className="hidden" 
-                  />
-                  <Upload className="w-3.5 h-3.5 mr-1 text-zinc-400" />
-                  <span className="text-[10px]">Subir Foto</span>
-                </label>
-              </div>
-              <span className="text-[9px] text-zinc-400 block leading-tight">
-                ⚡ Genera un atleta o producto con IA, o el motor creará un Escudo 3D de Campeonato con luces de estadio.
-              </span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {onOpenAiStudio && (
+                <button
+                  type="button"
+                  onClick={onOpenAiStudio}
+                  className="flex items-center justify-center p-2 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs transition shadow-sm group"
+                  title="Generar persona o producto con IA"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-300 group-hover:scale-110 transition" />
+                  <span>Generar IA</span>
+                </button>
+              )}
+              <label className="flex items-center justify-center p-2 border border-dashed border-[#333338] hover:border-[#388bff] rounded-lg bg-[#1a1a1e] cursor-pointer transition text-zinc-300 hover:text-white">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        if (ev.target?.result) {
+                          onChangeCopyInput({ ...copyInput, subjectImageUrl: ev.target.result as string });
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    e.target.value = '';
+                  }}
+                  className="hidden" 
+                />
+                <Upload className="w-3.5 h-3.5 mr-1 text-zinc-400" />
+                <span className="text-[10px]">Subir Foto</span>
+              </label>
             </div>
           )}
         </div>
       </div>
 
-      {/* 4. SECCIÓN: GUÍA DE ESTRUCTURA Y REFERENCIAS DE MARCA */}
-      <div className="p-3 border-b border-[#333333] flex-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center space-x-1">
-            <Layers className="w-3.5 h-3.5 text-[#388bff]" />
-            <span>Guía de Estructura de Marca</span>
-          </span>
-          <button
-            onClick={onOpenBrandEcosystem}
-            className="text-[10px] text-[#388bff] hover:underline"
-          >
-            Gestionar ({referencePieces.length})
-          </button>
-        </div>
-
-        <p className="text-[11px] text-zinc-400 mb-2 leading-relaxed">
-          Las piezas de referencia guían la paleta, pesos visuales y estructura del diseño (no se pegan como imagen sobre la pieza).
-        </p>
-
-        {/* Reference Pieces List */}
-        <div className="space-y-1.5 max-h-44 overflow-y-auto custom-scroll pr-1">
-          {/* Automático */}
-          <button
-            onClick={() => onSelectReferenceId(undefined)}
-            className={`w-full p-2 rounded border text-left flex items-center space-x-2.5 transition ${
-              !selectedReferenceId
-                ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white'
-                : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
-            }`}
-          >
-            <div className="w-7 h-7 rounded bg-[#1e1e1e] border border-[#3e3e3e] flex items-center justify-center shrink-0 text-[10px] font-bold text-[#388bff]">
-              AI
-            </div>
-            <div className="overflow-hidden flex-1">
-              <span className="font-semibold text-xs block truncate">Distribución Inteligente</span>
-              <span className="text-[10px] text-zinc-400 block truncate">Equilibra según el formato seleccionado</span>
-            </div>
-          </button>
-
-          {/* User's Reference Pieces */}
-          {referencePieces.map((ref) => (
-            <button
-              key={ref.id}
-              onClick={() => {
-                onSelectReferenceId(ref.id);
-                onChangeCompositionStyle(ref.layoutStructure);
-              }}
-              className={`w-full p-1.5 rounded border text-left flex items-center space-x-2 transition ${
-                selectedReferenceId === ref.id
-                  ? 'border-[#0d66d0] bg-[#0d66d0]/15 text-white'
-                  : 'border-[#383838] bg-[#262626] text-zinc-300 hover:bg-[#2d2d2d]'
-              }`}
-            >
-              <img 
-                src={ref.imageUrl} 
-                alt={ref.title} 
-                className="w-8 h-8 rounded object-cover bg-black shrink-0 border border-[#444444]"
-              />
-              <div className="overflow-hidden flex-1">
-                <span className="font-medium text-xs block truncate">{ref.title}</span>
-                <span className="text-[10px] text-zinc-400 block truncate">
-                  Estructura: {ref.layoutStructure}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {referencePieces.length === 0 && (
-          <div className="p-2.5 mt-2 text-center border border-dashed border-[#3e3e3e] rounded bg-[#262626]">
-            <p className="text-[11px] text-zinc-400 mb-1.5">No hay piezas de referencia subidas.</p>
-            <button
-              onClick={onOpenBrandEcosystem}
-              className="px-2.5 py-1 rounded bg-[#333333] hover:bg-[#3e3e3e] text-white text-xs font-medium inline-flex items-center space-x-1"
-            >
-              <Plus className="w-3 h-3" />
-              <span>Subir pieza de ejemplo</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 5. ARQUETIPOS DE ESTILO (MOTOR PROPIO) */}
-      <div className="p-3 border-b border-[#333333]">
+      {/* 4. SECCIÓN: ESTILO / ARQUETIPO VISUAL */}
+      <div className="p-3 border-b border-[#252528]">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Arquetipo Visual
+            Arquetipo de Estructura
           </span>
           <span className="text-[10px] text-zinc-500 font-mono">
             {compositionStyle}
           </span>
         </div>
         <div className="grid grid-cols-3 gap-1">
-          <button
-            onClick={() => onChangeCompositionStyle('split-left-right')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'split-left-right' || compositionStyle === 'sports-impact'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            ⚡ Matchday
-          </button>
-          <button
-            onClick={() => onChangeCompositionStyle('hero-center')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'hero-center'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            🎯 Hero Center
-          </button>
-          <button
-            onClick={() => onChangeCompositionStyle('cyber-tech')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'cyber-tech'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            💻 Cyber Tech
-          </button>
-          <button
-            onClick={() => onChangeCompositionStyle('minimal-editorial')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'minimal-editorial'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            💎 Luxury
-          </button>
-          <button
-            onClick={() => onChangeCompositionStyle('promo-bold')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'promo-bold'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            🏷️ Promo Bold
-          </button>
-          <button
-            onClick={() => onChangeCompositionStyle('story-vertical')}
-            className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
-              compositionStyle === 'story-vertical'
-                ? 'border-[#0d66d0] bg-[#0d66d0]/20 text-white font-bold'
-                : 'border-[#383838] bg-[#262626] text-zinc-400 hover:text-white'
-            }`}
-          >
-            📱 Story 9:16
-          </button>
+          {[
+            { id: 'split-left-right', label: '⚡ Matchday' },
+            { id: 'hero-center', label: '🎯 Hero Center' },
+            { id: 'cyber-tech', label: '💻 Cyber Tech' },
+            { id: 'minimal-editorial', label: '💎 Luxury' },
+            { id: 'promo-bold', label: '🏷️ Promo Bold' },
+            { id: 'story-vertical', label: '📱 Story 9:16' },
+          ].map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChangeCompositionStyle(item.id as CompositionStyle)}
+              className={`px-1.5 py-1 rounded text-[10px] font-medium border text-center truncate transition ${
+                compositionStyle === item.id
+                  ? 'border-[#388bff] bg-[#388bff]/20 text-white font-bold'
+                  : 'border-[#2d2d32] bg-[#1a1a1e] text-zinc-400 hover:text-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 6. BOTÓN PRINCIPAL DE DISEÑO & VARIACIONES (MOTOR LOCAL SVG) */}
-      <div className="p-3 bg-[#222222] border-t border-[#333333] space-y-2">
-        <div className="flex items-center space-x-1.5">
+      {/* 5. SECCIÓN DE DISEÑO: OPENAI SVG MASTER + MOTOR INTERNO */}
+      <div className="p-3 bg-[#18181c] border-t border-[#252528] mt-auto space-y-2">
+        {/* BOTÓN PRINCIPAL: DISEÑAR CON OPENAI SVG (GPT-4o Vision) */}
+        {onGenerateOpenAiSvg && (
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={onGenerateOpenAiSvg}
+              disabled={isOpenAiGenerating || isGenerating || !copyInput.headline?.trim()}
+              className={`w-full py-2.5 px-3 rounded-lg font-bold text-xs tracking-wide shadow-md flex items-center justify-center space-x-2 transition ${
+                isOpenAiGenerating || isGenerating || !copyInput.headline?.trim()
+                  ? 'bg-[#27272a] text-zinc-500 cursor-not-allowed border border-[#333338]'
+                  : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-indigo-900/30'
+              }`}
+              title="Diseñar pieza vectorial completa con OpenAI GPT-4o Vision analizando tus referencias"
+            >
+              {isOpenAiGenerating ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  <span className="truncate">{openAiStatusText || 'Diseñando con OpenAI...'}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Diseñar con OpenAI (SVG)</span>
+                </>
+              )}
+            </button>
+
+            <span className="text-[9px] text-zinc-500 block text-center leading-tight">
+              ⚡ Diseña con GPT-4o Vision basándose en tus referencias visuales y copy
+            </span>
+          </div>
+        )}
+
+        {/* MOTOR INTERNO ZOIK (OFFLINE) + VARIACIONES */}
+        <div className="flex items-center space-x-1.5 pt-1 border-t border-[#252528]">
           <button
+            type="button"
             onClick={onGenerate}
-            disabled={isGenerating || !copyInput.headline.trim()}
-            className={`flex-1 py-2.5 px-3 rounded font-bold text-xs tracking-wide shadow-sm flex items-center justify-center space-x-2 transition ${
-              isGenerating || !copyInput.headline.trim()
-                ? 'bg-[#2d2d2d] text-zinc-500 cursor-not-allowed border border-[#3e3e3e]'
-                : 'bg-[#0d66d0] hover:bg-[#1070e5] text-white'
+            disabled={isGenerating || isOpenAiGenerating || !copyInput.headline?.trim()}
+            className={`flex-1 py-1.5 px-2.5 rounded-lg font-semibold text-[11px] border transition flex items-center justify-center space-x-1.5 ${
+              isGenerating || isOpenAiGenerating || !copyInput.headline?.trim()
+                ? 'bg-[#202024] text-zinc-600 border-[#2d2d32] cursor-not-allowed'
+                : 'bg-[#222228] hover:bg-[#2a2a32] text-zinc-300 hover:text-white border-[#33333a]'
             }`}
-            title="Generar diseño vectorial completo con el motor interno"
+            title="Diseñar con motor local sin conexión"
           >
             {isGenerating ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                <span>Diseñando...</span>
+                <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span>Local...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Diseñar Pieza</span>
+                <Cpu className="w-3 h-3 text-[#388bff]" />
+                <span>Motor Interno</span>
               </>
             )}
           </button>
 
           {onGenerateVariation && (
             <button
+              type="button"
               onClick={onGenerateVariation}
-              disabled={isGenerating || !copyInput.headline.trim()}
-              className={`py-2.5 px-3 rounded font-bold text-xs border transition flex items-center space-x-1.5 shrink-0 ${
-                isGenerating || !copyInput.headline.trim()
-                  ? 'bg-[#2d2d2d] text-zinc-500 border-[#383838] cursor-not-allowed'
-                  : 'bg-[#2a2a2a] hover:bg-[#333333] text-amber-400 hover:text-amber-300 border-[#444444]'
+              disabled={isGenerating || isOpenAiGenerating || !copyInput.headline?.trim()}
+              className={`py-1.5 px-2 rounded-lg font-semibold text-[11px] border transition flex items-center space-x-1 shrink-0 ${
+                isGenerating || isOpenAiGenerating || !copyInput.headline?.trim()
+                  ? 'bg-[#202024] text-zinc-600 border-[#2d2d32] cursor-not-allowed'
+                  : 'bg-[#222228] hover:bg-[#2a2a32] text-amber-400 hover:text-amber-300 border-[#33333a]'
               }`}
-              title="Generar una variación alternativa (cambia iluminación, pesos y arquetipo)"
+              title="Generar una variación alternativa"
             >
-              <Shuffle className="w-3.5 h-3.5 text-amber-400" />
+              <Shuffle className="w-3 h-3 text-amber-400" />
               <span>Var #{variationSeed + 1}</span>
             </button>
           )}
         </div>
-
-        <p className="text-[10px] text-zinc-400 text-center">
-          Motor propio local • Capas vectoriales 100% editables en el lienzo
-        </p>
       </div>
 
     </aside>

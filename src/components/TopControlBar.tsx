@@ -369,16 +369,38 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             <select
               value={currentFont}
               onChange={(e) => handleFontChange(e.target.value)}
-              className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-2 py-1 rounded text-xs focus:outline-none focus:border-[#0d66d0] max-w-[140px] truncate"
+              className="bg-[#1a1a1a] border border-[#3e3e3e] text-white px-2 py-1 rounded text-xs focus:outline-none focus:border-[#0d66d0] max-w-[180px] truncate"
             >
               <option value={brand.typography.headlineFont}>★ {brand.typography.headlineFont} (Marca)</option>
-              <optgroup label="Fuentes del Sistema (PC)">
-                {localPcFonts.slice(0, 15).map(f => (
+              {localPcFonts.length > 0 && (
+                <optgroup label={`💻 Fuentes en tu PC (${localPcFonts.length})`}>
+                  {localPcFonts.map(f => (
+                    <option key={f.name} value={f.name}>{f.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="✨ Titulares & Display (Google Fonts)">
+                {FONT_CATALOG.filter(f => f.category === 'Display & Bold').map(f => (
                   <option key={f.name} value={f.name}>{f.name}</option>
                 ))}
               </optgroup>
-              <optgroup label="Google Fonts Pro">
-                {FONT_CATALOG.map(f => (
+              <optgroup label="✨ Modern Sans (Google Fonts)">
+                {FONT_CATALOG.filter(f => f.category === 'Modern Sans').map(f => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="✨ Editorial & Luxury Serif (Google Fonts)">
+                {FONT_CATALOG.filter(f => f.category === 'Luxury Serif').map(f => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="✨ Cyber & Tech (Google Fonts)">
+                {FONT_CATALOG.filter(f => f.category === 'Cyber & Tech').map(f => (
+                  <option key={f.name} value={f.name}>{f.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="✨ Script & Creativas (Google Fonts)">
+                {FONT_CATALOG.filter(f => f.category === 'Script & Creative').map(f => (
                   <option key={f.name} value={f.name}>{f.name}</option>
                 ))}
               </optgroup>
