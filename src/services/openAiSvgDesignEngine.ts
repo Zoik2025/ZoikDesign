@@ -25,6 +25,43 @@ export interface OpenAiSvgDesignResult {
 }
 
 /**
+ * Redimensiona y comprime una imagen a JPEG ligero (máx 768px) para enviar a OpenAI Vision.
+ * Esto evita exceder el límite de tokens y reduce el costo al mínimo (85 tokens por imagen con detail: low).
+ */
+async function resizeImageForVision(dataUrl: string, maxDim = 768): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/**
  * Extrae todas las fuentes tipográficas mencionadas en el SVG
  * para cargarlas de Google Fonts dinámicamente.
  */
@@ -103,7 +140,7 @@ export async function designPieceWithOpenAiSvg({
 
   onProgress?.('Analizando referencias visuales de la marca con OpenAI GPT-4o Vision...');
 
-  // 1. Mensaje de Sistema con directrices de Director de Arte y SVG
+  // 1. Mensaje de Sistema con directrices de Director de Arte y SVG (SOLO TEXTO, CERO BASE64)
   const systemPrompt = `You are a legendary Senior Art Director and master of SVG vector advertising design.
 Your task is to generate a complete, high-impact commercial advertising poster/flyer as pure, valid, standalone SVG.
 
@@ -127,15 +164,14 @@ BRAND IDENTITY & REFERENCE IMAGES:
 - Brand Headline Font: "${brand.typography?.headlineFont || 'Montserrat'}"
 
 STYLE & COMPOSITION GUIDELINES:
-1. REFERENCE HARMONY: If reference images are attached, look at how the brand normally designs its pieces. Replicate its color balance, glow effects, geometric angles, badge styles, and typographic impact.
+1. REFERENCE HARMONY: Look at the attached reference images to understand how this brand normally looks. Replicate its color balance, glow effects, geometric angles, badge styles, and typographic impact.
 2. BACKGROUND: Highly polished, dark or vibrant background with <defs> gradients (<linearGradient>, <radialGradient>). Add subtle vector geometry, glowing light spots, diagonal tech accents, or framed borders.
 3. TYPOGRAPHY:
-   - Headline: Maximum visual impact (<text> tags with font-weight="900" or "bold", font-size appropriate for width, clean letter-spacing). If headline is long, split into 2 or 3 readable lines with tspan or distinct text tags.
+   - Headline: Maximum visual impact (<text> tags with font-weight="900" or "bold", font-size appropriate for width, clean letter-spacing). If headline is long, split into 2 or 3 readable lines with distinct <text> tags.
    - Subtitle: High legibility, elegant font size (24-36px), complementary color with good contrast.
 4. BADGE / PROMO: Eye-catching pill (<rect rx="20">) or badge with bright gradient and high-contrast text.
 5. CTA BUTTON: Prominent button (<rect rx="30">) with drop-shadow effect, distinct background color, and centered bold text.
-6. HERO VISUAL: Leave a focal area for the product/subject or create an artistic vector emblem/crest/lighting glow.
-${copyInput.subjectImageUrl ? `- NOTE: The user has a subject photo. If appropriate, place an <image href="${copyInput.subjectImageUrl}" x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.25)}" width="${Math.round(width * 0.8)}" height="${Math.round(height * 0.5)}" preserveAspectRatio="xMidYMid meet" /> in the hero position, or design the background and typography so the subject sits harmoniously in the center.` : ''}
+6. HERO COMPOSITION: ${copyInput.subjectImageUrl ? 'The user has provided a protagonist photo/subject. Compose the layout, lighting and typography harmoniously leaving a balanced hero focal area in the center/side for this subject.' : 'Create an artistic vector emblem, geometric badge or central lighting glow matching the theme.'}
 
 CRITICAL OUTPUT FORMAT:
 - Output MUST be 100% valid SVG code.
@@ -155,7 +191,7 @@ CRITICAL OUTPUT FORMAT:
 
   userContent.push({ type: 'text', text: userPrompt });
 
-  // Piezas de referencia visual de la marca (hasta 3 imágenes para velocidad y fidelidad)
+  // Piezas de referencia visual de la marca (hasta 3 imágenes, comprimidas para visión)
   const refImages = (brand.referencePieces || [])
     .map(p => p.imageUrl)
     .filter(url => Boolean(url) && (url.startsWith('http') || url.startsWith('data:image/')));
@@ -163,13 +199,14 @@ CRITICAL OUTPUT FORMAT:
   if (refImages.length > 0) {
     userContent.push({
       type: 'text',
-      text: `These ${refImages.length} images are examples of how this brand normally looks. Emulate this brand's visual identity, typography rhythm, lighting, and layout conventions:`,
+      text: `These ${Math.min(refImages.length, 3)} images are examples of how this brand normally looks. Emulate this brand's visual identity, typography rhythm, lighting, and layout conventions:`,
     });
 
     for (const refUrl of refImages.slice(0, 3)) {
+      const optimizedUrl = await resizeImageForVision(refUrl, 768);
       userContent.push({
         type: 'image_url',
-        image_url: { url: refUrl, detail: 'low' },
+        image_url: { url: optimizedUrl, detail: 'low' },
       });
     }
   }
@@ -180,9 +217,10 @@ CRITICAL OUTPUT FORMAT:
       type: 'text',
       text: `Here is the photo of the protagonist subject/product to integrate:`,
     });
+    const optimizedSubject = await resizeImageForVision(copyInput.subjectImageUrl, 768);
     userContent.push({
       type: 'image_url',
-      image_url: { url: copyInput.subjectImageUrl, detail: 'low' },
+      image_url: { url: optimizedSubject, detail: 'low' },
     });
   }
 
@@ -233,12 +271,6 @@ CRITICAL OUTPUT FORMAT:
         try {
           canvas.clear();
 
-          // Ajustar fondo si el SVG tiene color o dimensiones
-          if (options.width && options.height) {
-            // El canvas ya tiene dimensiones configuradas por docConfig
-          }
-
-          // Si el primer objeto es un rect que cubre todo el lienzo, podemos usarlo como background
           const validObjects = (objects || []).filter(Boolean);
 
           validObjects.forEach((obj) => {
@@ -273,17 +305,16 @@ CRITICAL OUTPUT FORMAT:
             }
           });
 
-          // Si el usuario tenía una foto de sujeto y no se incluyó como imagen en el SVG, añadirla al centro
-          const hasImageInSvg = validObjects.some(o => o.type === 'image');
-          if (copyInput.subjectImageUrl && !hasImageInSvg) {
+          // Si el usuario tenía una foto de sujeto, integrarla centrada en el área hero
+          if (copyInput.subjectImageUrl) {
             fabric.Image.fromURL(copyInput.subjectImageUrl, (img) => {
-              img.scaleToWidth(width * 0.65);
-              if (img.getScaledHeight() > height * 0.55) {
-                img.scaleToHeight(height * 0.55);
+              img.scaleToWidth(width * 0.6);
+              if (img.getScaledHeight() > height * 0.5) {
+                img.scaleToHeight(height * 0.5);
               }
               img.set({
                 left: (width - img.getScaledWidth()) / 2,
-                top: (height - img.getScaledHeight()) / 2 + 30,
+                top: (height - img.getScaledHeight()) / 2 + 20,
                 selectable: true,
               });
               canvas.add(img);
