@@ -21,12 +21,8 @@ process.on('unhandledRejection', (reason) => {
 
 app.setAppUserModelId('com.zoikdesign.app');
 
-// Desactivar aceleración de hardware para evitar congelamientos y pantallas negras con GPUs NVIDIA
+// Desactivar aceleración por hardware para evitar congelamientos, cuelgues de GPU y pantallas negras
 app.disableHardwareAcceleration();
-
-// Registro de instancia
-const gotTheLock = app.requestSingleInstanceLock();
-log(`Got single instance lock: ${gotTheLock}`);
 
 let mainWindow = null;
 
@@ -69,7 +65,7 @@ function createWindow() {
       log(`did-fail-load: ${errorCode} ${errorDescription}`);
     });
 
-    mainWindow.on('close', (e) => {
+    mainWindow.on('close', () => {
       log('mainWindow close event fired');
     });
 
@@ -81,17 +77,6 @@ function createWindow() {
     log('Error in createWindow: ' + err.stack);
   }
 }
-
-app.on('second-instance', () => {
-  log('second-instance event triggered');
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
-  } else {
-    createWindow();
-  }
-});
 
 app.whenReady().then(() => {
   log('app.whenReady fired');
