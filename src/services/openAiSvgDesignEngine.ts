@@ -9,6 +9,7 @@ export interface OpenAiSvgDesignParams {
   brand: BrandKit;
   apiKey: string;
   compositionStyle?: CompositionStyle;
+  selectedReferenceId?: string;
   variationSeed?: number;
   onProgress?: (status: string) => void;
 }
@@ -25,34 +26,43 @@ export interface OpenAiSvgDesignResult {
 }
 
 /**
- * Redimensiona y comprime una imagen a JPEG ligero (máx 768px) para enviar a OpenAI Vision.
- * Esto evita exceder el límite de tokens y reduce el costo al mínimo (85 tokens por imagen con detail: low).
+ * Redimensiona y comprime una imagen a JPEG optimizado (máx 1024px) para OpenAI Vision.
+ * NO activa crossOrigin en URIs de tipo data: para evitar bloqueos del navegador.
  */
-async function resizeImageForVision(dataUrl: string, maxDim = 768): Promise<string> {
-  if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
+async function resizeImageForVision(dataUrl: string, maxDim = 1024): Promise<string> {
+  if (!dataUrl) return dataUrl;
+  if (!dataUrl.startsWith('data:image')) return dataUrl;
+
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (dataUrl.startsWith('http')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
-      let w = img.width;
-      let h = img.height;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) {
-          h = Math.round((h * maxDim) / w);
-          w = maxDim;
-        } else {
-          w = Math.round((w * maxDim) / h);
-          h = maxDim;
+      try {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
         }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      } else {
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } else {
+          resolve(dataUrl);
+        }
+      } catch (err) {
+        console.warn('Fallo redimensionando imagen para visión, usando original:', err);
         resolve(dataUrl);
       }
     };
@@ -63,7 +73,7 @@ async function resizeImageForVision(dataUrl: string, maxDim = 768): Promise<stri
 
 /**
  * Extrae todas las fuentes tipográficas mencionadas en el SVG
- * para cargarlas de Google Fonts dinámicamente.
+ * para cargarlas de Google Fonts dinámicamente en el DOM.
  */
 function extractAndLoadFontsFromSvg(svgCode: string): void {
   try {
@@ -116,7 +126,7 @@ export function extractCleanSvg(rawContent: string): string {
 
 /**
  * Diseña una pieza publicitaria completa en formato SVG nativo utilizando GPT-4o Vision.
- * Analiza el copy, las imágenes de referencia de marca y la foto del producto/sujeto.
+ * Analiza el copy, las imágenes de referencia de marca (con detail: high) y el sujeto.
  */
 export async function designPieceWithOpenAiSvg({
   canvas,
@@ -125,6 +135,7 @@ export async function designPieceWithOpenAiSvg({
   brand,
   apiKey,
   compositionStyle = 'split-left-right',
+  selectedReferenceId,
   variationSeed = 0,
   onProgress,
 }: OpenAiSvgDesignParams): Promise<OpenAiSvgDesignResult> {
@@ -138,93 +149,110 @@ export async function designPieceWithOpenAiSvg({
   const badgeText = (copyInput.badgeText || '').trim();
   const ctaText = (copyInput.ctaText || '').trim();
 
-  onProgress?.('Analizando referencias visuales de la marca con OpenAI GPT-4o Vision...');
+  onProgress?.('Analizando referencias visuales de la marca con GPT-4o Vision...');
 
-  // 1. Mensaje de Sistema con directrices de Director de Arte y SVG (SOLO TEXTO, CERO BASE64)
-  const systemPrompt = `You are a legendary Senior Art Director and master of SVG vector advertising design.
-Your task is to generate a complete, high-impact commercial advertising poster/flyer as pure, valid, standalone SVG.
+  // Determinar piezas de referencia a usar
+  const allRefs = (brand.referencePieces || []).filter(
+    p => Boolean(p.imageUrl) && (p.imageUrl.startsWith('http') || p.imageUrl.startsWith('data:image/'))
+  );
 
-CANVAS DIMENSIONS:
+  let targetRefs = allRefs;
+  if (selectedReferenceId) {
+    const matched = allRefs.filter(r => r.id === selectedReferenceId);
+    if (matched.length > 0) {
+      targetRefs = matched;
+    }
+  }
+
+  const hasReferences = targetRefs.length > 0;
+
+  // 1. Mensaje de Sistema con directrices avanzadas de Director de Arte publicitario
+  const systemPrompt = `You are a world-class Executive Creative Director & Master SVG Vector Artist for sports betting, gaming, high-impact retail, and modern commercial campaigns.
+Your job is to generate an explosive, award-winning, agency-grade advertising poster as 100% pure, valid SVG.
+
+CANVAS SPECIFICATIONS:
 - Width: ${width}px
 - Height: ${height}px
 - viewBox: "0 0 ${width} ${height}"
 
-USER COPY (CRITICAL - USE EXACTLY AS GIVEN):
-${headline ? `- Main Headline (H1): "${headline}"` : '- No headline specified.'}
-${subtitle ? `- Subtitle / Body Copy: "${subtitle}"` : ''}
+USER COPY (CRITICAL - USE EXACTLY):
+- Headline: "${headline || 'GRAN EVENTO'}"
+${subtitle ? `- Subtitle / Bajada: "${subtitle}"` : ''}
 ${badgeText ? `- Promotional Badge: "${badgeText}"` : ''}
 ${ctaText ? `- Call to Action (CTA) Button: "${ctaText}"` : ''}
-Do NOT invent placeholder text. If a text field is not provided, do not render that element.
 
-BRAND IDENTITY & REFERENCE IMAGES:
-- Brand Name: "${brand.name || 'Brand'}"
-- Primary Brand Color: "${brand.colors?.primary || '#0d66d0'}"
-- Secondary Accent: "${brand.colors?.accent || '#00d2ff'}"
-- Dark Background: "${brand.colors?.backgroundDark || '#0b0f19'}"
-- Brand Headline Font: "${brand.typography?.headlineFont || 'Montserrat'}"
+${hasReferences ? `
+=========================================================
+CRITICAL ART DIRECTION & VISUAL TRUTH (HIGHEST PRIORITY):
+The user attached authentic reference image(s) showing EXACTLY how their brand looks.
+DO NOT use generic blue backgrounds or flat basic shapes.
+YOU MUST DEEPLY REPLICATE THE EXACT AESTHETIC SEEN IN THE REFERENCE IMAGE:
+1. PALETTE & VIBRANCY: Extract the authentic dominant and neon accent colors from the reference (e.g. electric magenta, neon cyan, glowing lime/yellow, stadium golds, deep dark charcoals). Create rich SVG <defs> with <linearGradient> and <radialGradient> using these exact extracted colors.
+2. LIGHTING & ATMOSPHERE: Replicate the explosive lighting: radial glow halos (<radialGradient>), stadium spotlight beams, lens flare orbs, neon edge lines, and dark atmospheric gradients.
+3. DYNAMIC GEOMETRY: Incorporate angled slants, skewed containers (e.g. transform="skewX(-8)" or "skewX(-10)"), glowing borders, diagonal speed accents, and tech geometric motifs.
+=========================================================
+` : `
+STYLE GUIDELINES:
+Create a rich, dark atmospheric sports/gaming background with radial gradients, glowing spotlight beams, and high-contrast neon accents.
+`}
 
-STYLE & COMPOSITION GUIDELINES:
-1. REFERENCE HARMONY: Look at the attached reference images to understand how this brand normally looks. Replicate its color balance, glow effects, geometric angles, badge styles, and typographic impact.
-2. BACKGROUND: Highly polished, dark or vibrant background with <defs> gradients (<linearGradient>, <radialGradient>). Add subtle vector geometry, glowing light spots, diagonal tech accents, or framed borders.
-3. TYPOGRAPHY:
-   - Headline: Maximum visual impact (<text> tags with font-weight="900" or "bold", font-size appropriate for width, clean letter-spacing). If headline is long, split into 2 or 3 readable lines with distinct <text> tags.
-   - Subtitle: High legibility, elegant font size (24-36px), complementary color with good contrast.
-4. BADGE / PROMO: Eye-catching pill (<rect rx="20">) or badge with bright gradient and high-contrast text.
-5. CTA BUTTON: Prominent button (<rect rx="30">) with drop-shadow effect, distinct background color, and centered bold text.
-6. HERO COMPOSITION: ${copyInput.subjectImageUrl ? 'The user has provided a protagonist photo/subject. Compose the layout, lighting and typography harmoniously leaving a balanced hero focal area in the center/side for this subject.' : 'Create an artistic vector emblem, geometric badge or central lighting glow matching the theme.'}
+CRITICAL HEADLINE & TYPOGRAPHY RULES (NEVER OVERFLOW):
+- The canvas width is ${width}px. A headline with more than 3 words WILL OVERFLOW if placed on a single horizontal line.
+- You MUST SPLIT the headline into 2, 3, or 4 stacked lines of massive, commanding typography.
+  Example for "SUELTA EL CONTROL UN CHIN: LLUEVEN GANADORES":
+  Line 1: <text x="50%" y="28%" font-size="88px" font-weight="900" text-anchor="middle" fill="#ffffff" transform="skewX(-8)">SUELTA EL</text>
+  Line 2: <text x="50%" y="36%" font-size="88px" font-weight="900" text-anchor="middle" fill="url(#neonGradient)" transform="skewX(-8)">CONTROL UN CHIN:</text>
+  Line 3: <text x="50%" y="44%" font-size="88px" font-weight="900" text-anchor="middle" fill="url(#neonGradient)" transform="skewX(-8)">LLUEVEN GANADORES</text>
+- Two-Tone Contrast: Keep Line 1 in crisp pure white (#ffffff), and Lines 2/3 in the vivid neon gradient or accent color extracted from the reference image.
+- Subtitle: Position below the headline with elegant contrast, font-weight="700", font-size="36px" to "44px".
+- CTA Button: Large, high-impact pill (<rect rx="35">) with bright gradient fill, drop-shadow/glow, and bold contrasting text centered inside.
 
-CRITICAL OUTPUT FORMAT:
-- Output MUST be 100% valid SVG code.
-- Starts with <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-- Ends with </svg>
-- Output ONLY the raw SVG code (or wrapped in \`\`\`svg ... \`\`\`).
-- No markdown conversational intros or outros.`;
+OUTPUT FORMAT RULES:
+- Output MUST be 100% valid standalone SVG starting with <svg and ending with </svg>.
+- Do NOT output any conversational text or markdown explanation.
+- Return ONLY the SVG code.`;
 
-  // 2. Construir contenido de usuario con texto y referencias visuales (Vision)
+  // 2. Construir contenido de usuario con Vision en detail: high
   const userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail?: string } }> = [];
 
-  let userPrompt = `Generate the advertising SVG for canvas ${width}x${height} (${docConfig.orientation || 'portrait'}, style: ${compositionStyle}, variation: ${variationSeed}).\n`;
-  userPrompt += `Headline: "${headline || 'Tu Marca Aquí'}"\n`;
+  let userPrompt = `Generate the commercial advertising SVG poster for canvas ${width}x${height} (${docConfig.orientation || 'portrait'}, style: ${compositionStyle}, variation: ${variationSeed}).\n`;
+  userPrompt += `Headline: "${headline}"\n`;
   if (subtitle) userPrompt += `Subtitle: "${subtitle}"\n`;
   if (badgeText) userPrompt += `Badge: "${badgeText}"\n`;
-  if (ctaText) userPrompt += `CTA: "${ctaText}"\n`;
+  if (ctaText) userPrompt += `CTA Button: "${ctaText}"\n`;
 
   userContent.push({ type: 'text', text: userPrompt });
 
-  // Piezas de referencia visual de la marca (hasta 3 imágenes, comprimidas para visión)
-  const refImages = (brand.referencePieces || [])
-    .map(p => p.imageUrl)
-    .filter(url => Boolean(url) && (url.startsWith('http') || url.startsWith('data:image/')));
-
-  if (refImages.length > 0) {
+  // Piezas de referencia visual de la marca (enviadas con detail: high para captar colores y estilo exactos)
+  if (hasReferences) {
     userContent.push({
       type: 'text',
-      text: `These ${Math.min(refImages.length, 3)} images are examples of how this brand normally looks. Emulate this brand's visual identity, typography rhythm, lighting, and layout conventions:`,
+      text: `Here is the visual reference image showing our exact brand identity and visual style. Analyze its color scheme, lighting glows, typographic slant, and layout mood, and replicate this authentic aesthetic in the SVG:`,
     });
 
-    for (const refUrl of refImages.slice(0, 3)) {
-      const optimizedUrl = await resizeImageForVision(refUrl, 768);
+    for (const ref of targetRefs.slice(0, 2)) {
+      const optimizedUrl = await resizeImageForVision(ref.imageUrl, 1024);
       userContent.push({
         type: 'image_url',
-        image_url: { url: optimizedUrl, detail: 'low' },
+        image_url: { url: optimizedUrl, detail: 'high' },
       });
     }
   }
 
-  // Foto del sujeto/producto del usuario (si existe)
+  // Foto del sujeto/protagonista (si existe)
   if (copyInput.subjectImageUrl && (copyInput.subjectImageUrl.startsWith('http') || copyInput.subjectImageUrl.startsWith('data:image/'))) {
     userContent.push({
       type: 'text',
-      text: `Here is the photo of the protagonist subject/product to integrate:`,
+      text: `Here is the photo of the hero subject/product to feature in the design:`,
     });
-    const optimizedSubject = await resizeImageForVision(copyInput.subjectImageUrl, 768);
+    const optimizedSubject = await resizeImageForVision(copyInput.subjectImageUrl, 1024);
     userContent.push({
       type: 'image_url',
-      image_url: { url: optimizedSubject, detail: 'low' },
+      image_url: { url: optimizedSubject, detail: 'high' },
     });
   }
 
-  onProgress?.('Generando diseño vectorial SVG con OpenAI...');
+  onProgress?.('Sintetizando vectores y composición con OpenAI GPT-4o...');
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -259,9 +287,9 @@ CRITICAL OUTPUT FORMAT:
     throw new Error('La respuesta de OpenAI no contenía un SVG válido.');
   }
 
-  onProgress?.('Cargando capas vectoriales en el lienzo interactivo...');
+  onProgress?.('Inyectando capas vectoriales en el lienzo interactivo...');
 
-  // Precargar las fuentes tipográficas utilizadas en el SVG
+  // Precargar las fuentes tipográficas del SVG
   extractAndLoadFontsFromSvg(cleanSvg);
 
   // 3. Cargar el SVG generado en el canvas de Fabric.js
@@ -274,7 +302,7 @@ CRITICAL OUTPUT FORMAT:
           const validObjects = (objects || []).filter(Boolean);
 
           validObjects.forEach((obj) => {
-            // Promover elementos de texto estándar a IText para que el usuario pueda hacer doble clic y editarlos
+            // Promover elementos de texto a IText para edición directa con doble clic
             if (obj.type === 'text') {
               const t = obj as fabric.Text;
               const itext = new fabric.IText(t.text || '', {
@@ -293,6 +321,8 @@ CRITICAL OUTPUT FORMAT:
                 scaleX: t.scaleX,
                 scaleY: t.scaleY,
                 angle: t.angle,
+                skewX: (t as any).skewX || 0,
+                skewY: (t as any).skewY || 0,
                 selectable: true,
                 editable: true,
               });

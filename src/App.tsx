@@ -356,6 +356,7 @@ export const App: React.FC = () => {
         brand: currentBrand,
         apiKey,
         compositionStyle,
+        selectedReferenceId,
         variationSeed,
         onProgress: (status) => setOpenAiSvgStatus(status),
       });
